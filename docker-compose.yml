@@ -27,6 +27,8 @@ services:
       - bytebricks
     env_file:
       - ./.env
+    volumes:
+      - ./alembic:/app/alembic
 
   smtp-service:
     image: axllent/mailpit
