@@ -14,7 +14,7 @@ admin_router_protected = APIRouter(
     dependencies=[Depends(oauth2_scheme), Depends(validate_access_token), Depends(is_admin)]
 )
 
-@admin_router_protected.post("/config", status_code=status.HTTP_200_OK)
+@admin_router_protected.put("/config", status_code=status.HTTP_200_OK)
 async def update_admin_config(data: UpdateAdminConfigRequest, session: Session = Depends(get_session)):
     await admin.update_admin_config(data, session)
     return JSONResponse({"message": "Admin config has been updated"})

@@ -23,7 +23,7 @@ def test_upload_download_delete_files(client, user):
     
     # check documents list
     response = client.get("/users/documents/list", headers=headers)
-    file_info_list = [{"filename": file[1][0], "content_type": file[1][2], "error": None} for file in dummy_files]
+    file_info_list = [{"filename": file[1][0], "content_type": file[1][2]} for file in dummy_files]
     assert response.status_code == 200
     assert len(response.json()["files"]) == len(dummy_files)
     assert response.json()["files"] == file_info_list

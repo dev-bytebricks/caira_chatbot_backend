@@ -11,4 +11,3 @@ class UpdateAdminConfigRequest(BaseModel):
     disclaimers: Optional[str] = None
     gdrive_enabled: Optional[bool] = None
     logo_link: Optional[str] = None
-    updated_at: Optional[datetime] = None

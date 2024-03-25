@@ -102,8 +102,8 @@ def construct_kb_chain():
 
 def get_suggested_questions_chain():
     template = """
-    Based on the conversation between a user and legal writer, generate 5 PRECISE 10 WORDS follow-up questions.
-    NOTE: If no conversation is provided then generate 5 PRECISE 10 WORDS questions a user can ask from a legal writer.
+    Based on the conversation between a user and legal writer, generate 5 PRECISE 5 WORDS follow-up questions.
+    NOTE: If no conversation is provided then generate 5 PRECISE 5 WORDS questions a user can ask from a legal writer.
 
     Conversation:'''{chat_history}'''
 
