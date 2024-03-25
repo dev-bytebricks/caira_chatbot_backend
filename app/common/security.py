@@ -6,7 +6,7 @@ from passlib.context import CryptContext
 from app.common.database import get_session
 from app.common.settings import get_settings
 from jose import JWTError, jwt
-from app.models.user import User, UserToken
+from app.models.user import User, UserToken, Role
 from sqlalchemy.orm import Session, joinedload
 
 SPECIAL_CHARACTERS = ['!', '@', '#', '$', '%', '=', ':', '?', '.', '/', '|', '~', '>']
@@ -107,7 +107,7 @@ async def validate_refresh_token(refresh_token: str, session: Session):
     refresh_token_db = session.query(UserToken).options(joinedload(UserToken.user)).\
         filter(UserToken.refresh_token == refresh_token,
                UserToken.user_id == username,
-               UserToken.expires_at > datetime.utcnow()).first()
+               UserToken.expires_at > datetime.now(timezone.utc)).first()
     if refresh_token_db is None:
         raise Exception("Refresh token is not valid")
 
@@ -123,6 +123,19 @@ async def get_current_user(username: str = Depends(validate_access_token), sessi
     if user is None:
         raise credentials_exception
     return user
+
+async def is_admin(username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Unauthorized Access",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    user = await get_user_from_db(username, session)
+    if user is None:
+        raise credentials_exception
+    else:
+        if user.role != Role.Admin:
+            raise credentials_exception
 
 async def get_user_from_db(email: str, session: Session):
     try:

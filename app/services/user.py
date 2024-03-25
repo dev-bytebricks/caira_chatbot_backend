@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 import logging
+import uuid
 from fastapi import HTTPException, status
 from app.common.security import delete_refresh_tokens_from_db, get_user_from_db, hash_password, is_password_strong_enough, verify_password
-from app.models.user import User
+from app.common import getzep
+from app.models.user import AdminConfig, User
 from app.services import email
 from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT
 
@@ -36,10 +38,14 @@ async def create_user_account(data, session, background_tasks):
     if not is_password_strong_enough(data.password):
         raise HTTPException(status_code=400, detail="Please provide a strong password.")
 
+    # raise http exception if user is already registered in zep
+    await _check_user_in_zep(data.email)
+
     user = User()
     user.name = data.name
     user.email = data.email
     user.password = hash_password(data.password)
+    user.role = data.role
     user.is_active = False
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)
@@ -78,6 +84,8 @@ async def activate_user_account(data, session, background_tasks):
     session.commit()
     session.refresh(user)
 
+    await _add_user_to_zep(user)
+
     # Activation Confirmation Email
     await email.send_account_activation_confirmation_email(user, background_tasks)
 
@@ -113,3 +121,33 @@ async def reset_user_password(data, session):
 
 async def logout_user(username, session):
     await delete_refresh_tokens_from_db(username, session)
+
+async def _check_user_in_zep(user_id):
+    if getzep.check_user_exists(user_id):
+        logging.error("User with this email already exists in Zep.")
+        raise HTTPException(status_code=400, detail="User with this email already exists in Zep.")
+
+    if len(getzep.get_all_sessions_of_user(user_id)) > 0:
+        logging.error(f'Zep session already registered for user')
+        raise HTTPException(status_code=400, detail="Zep session already registered for user.")
+    
+async def _add_user_to_zep(user):
+    if not getzep.check_user_exists(user.email):
+        getzep.add_new_user(user.email, "emailid", user.name)
+    else:
+        logging.error("User with this email already exists in Zep.")
+        raise HTTPException(status_code=400, detail="User with this email already exists in Zep.")
+
+    user_all_sessions = getzep.get_all_sessions_of_user(user.email)
+    if len(user_all_sessions) == 0:
+        getzep.add_session(user_id=user.email, sessionid=uuid.uuid4().hex)
+        user_all_sessions = getzep.get_all_sessions_of_user(user.email)
+    else:
+        logging.error(f'Zep session already registered for user, session: {user_all_sessions}')
+        raise HTTPException(status_code=400, detail="Zep session already registered for user.")
+    
+async def fetch_app_info(session):
+    admin_config = session.query(AdminConfig).first()
+    if admin_config is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="App info not found in database.")
+    return admin_config

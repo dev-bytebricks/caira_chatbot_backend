@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.common.database import get_session
 from app.common.security import oauth2_scheme, validate_access_token, get_current_user
-from app.schemas.responses.user import UserResponse
+from app.schemas.responses.user import UserResponse, AppInfoResponse
 from app.schemas.requests.user import RegisterUserRequest, VerifyUserRequest, EmailRequest, ResetRequest
 from app.services import user
 
@@ -46,6 +46,10 @@ async def verify_user(data: VerifyUserRequest, background_tasks: BackgroundTasks
 @user_router_protected.get("/me", status_code=status.HTTP_200_OK, response_model=UserResponse)
 async def fetch_user(user = Depends(get_current_user)):
     return user
+
+@user_router_protected.get("/app-info", status_code=status.HTTP_200_OK, response_model=AppInfoResponse)
+async def fetch_app_info(session: Session = Depends(get_session)):
+    return await user.fetch_app_info(session)
 
 @user_router_protected.get("/logout", status_code=status.HTTP_200_OK)
 async def logout_user(username: str = Depends(validate_access_token), session: Session = Depends(get_session)):

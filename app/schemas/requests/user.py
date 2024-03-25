@@ -1,10 +1,12 @@
 from pydantic import BaseModel, EmailStr
+from app.models.user import Role
 
 class RegisterUserRequest(BaseModel):
     name: str
     email: EmailStr
     password: str
-    
+    role: Role
+
 class VerifyUserRequest(BaseModel):
     token: str
     email: EmailStr

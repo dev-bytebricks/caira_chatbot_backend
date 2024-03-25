@@ -2,7 +2,9 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from urllib.parse import quote_plus
-from dotenv import find_dotenv
+from dotenv import find_dotenv, load_dotenv
+
+load_dotenv(override=True)
 
 class Settings(BaseSettings):
 
@@ -19,12 +21,12 @@ class Settings(BaseSettings):
     
     @property
     def DATABASE_URI(self) -> str:
-        return f"mysql+pymysql://{self.MYSQL_USER}:%s@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}" % quote_plus(self.MYSQL_PASSWORD)
+        return f"mysql+pymysql://{self.MYSQL_USER}:{quote_plus(self.MYSQL_PASSWORD)}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DB}"
 
-    # Other Configs
+    # Other Config
     FRONTEND_HOST: str
 
-    # Token Configs
+    # Token Config
     JWT_ACCESS_SECRET: str
     JWT_REFRESH_SECRET: str
     ACCESS_TOKEN_EXPIRE_MINUTES: int
@@ -46,6 +48,24 @@ class Settings(BaseSettings):
     @property
     def MAIL_TEMPLATE_FOLDER(self) -> str:
         return Path(__file__).parent.parent / "templates"
+
+    # Azure Storage Config
+    AZURE_STORAGE_ACCOUNT_KEY: str
+    AZURE_STORAGE_ACCOUNT_NAME: str
+    AZURE_STORAGE_CONTAINER_NAME: str
+    AZURE_STORAGE_CONNECTION_STRING: str
+
+    # OpenAI Config
+    OPENAI_API_KEY: str
+
+    # Pinecone Config
+    PINECONE_API_KEY: str
+    PINECONE_ENV: str
+    PINECONE_CONSUMER_INDEX: str
+    PINECONE_KNOWLEDGE_BASE_INDEX: str
+
+    # ZEP Config
+    ZEP_API_URL: str
 
     # Pydantic Settings
     model_config = SettingsConfigDict(extra= "ignore", env_file= find_dotenv(".env"), case_sensitive=True)

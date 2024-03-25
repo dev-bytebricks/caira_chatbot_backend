@@ -6,6 +6,7 @@
 """
 import time
 from app.common.security import hash_password
+from app.common import getzep
 from app.models.user import User
 from app.utils.email_context import USER_VERIFY_ACCOUNT
 
@@ -21,8 +22,11 @@ def test_user_account_verification(client, inactive_user, test_session):
     activated_user = test_session.query(User).filter(User.email == inactive_user.email).first()
     assert activated_user.is_active is True
     assert activated_user.verified_at is not None
+    
+    # delete user from zep
+    getzep.delete_user(inactive_user.email)
 
-def test_user_link_does_not_work_twice(client, inactive_user, test_session):
+def test_user_link_does_not_work_twice(client, inactive_user):
     token_context = inactive_user.get_context_string(USER_VERIFY_ACCOUNT)
     token = hash_password(token_context)
     time.sleep(1)
@@ -36,6 +40,9 @@ def test_user_link_does_not_work_twice(client, inactive_user, test_session):
     # it should not work though
     response = client.post('/users/verify', json=data)
     assert response.status_code != 200
+    
+    # delete user from zep
+    getzep.delete_user(inactive_user.email)
     
 def test_user_invalid_token_does_not_work(client, inactive_user, test_session):
     data = {

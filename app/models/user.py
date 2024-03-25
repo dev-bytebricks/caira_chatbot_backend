@@ -1,7 +1,12 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, func, ForeignKey
+import enum
+from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String, func, ForeignKey, Enum
 from app.common.database import Base
 from sqlalchemy.orm import mapped_column, relationship
+
+class Role(enum.Enum):
+    User = 0
+    Admin = 1
 
 class User(Base):
     __tablename__ = 'users'
@@ -10,11 +15,13 @@ class User(Base):
     email = Column(String(255), unique=True, index=True)
     password = Column(String(100))
     is_active = Column(Boolean, default=False)
+    role = Column(Enum(Role), nullable=False)
     verified_at = Column(DateTime, nullable=True, default=None)
     updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     
     tokens = relationship("UserToken", back_populates="user")
+    documents = relationship("UserDocument", back_populates="user")
 
     def get_context_string(self, context: str):
         return f"{context}{self.password[-6:]}{self.updated_at.strftime('%m%d%Y%H%M%S')}".strip()
@@ -22,9 +29,39 @@ class User(Base):
 class UserToken(Base):
     __tablename__ = "user_tokens"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = mapped_column(ForeignKey('users.id'))
+    user_id = mapped_column(ForeignKey('users.email'))
     refresh_token = Column(String(250), nullable=True, index=True, default=None)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     expires_at = Column(DateTime, nullable=False)
     
     user = relationship("User", back_populates="tokens")
+
+class UserDocument(Base):
+    __tablename__ = "user_documents"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = mapped_column(ForeignKey('users.email'))
+    document_name = Column(String(250), nullable=True, index=True, default=None)
+    content_type = Column(String(250), nullable=True, index=True, default=None)
+    uploaded_at = Column(DateTime, nullable=False, server_default=func.now())
+    
+    user = relationship("User", back_populates="documents")
+
+class AdminConfig(Base):
+    __tablename__ = "admin_config"
+    id = Column(Integer, primary_key=True)
+    llm_model_name = Column(String(250), nullable=False, index=True, default=None)
+    llm_temperature = Column(Numeric(2,2), nullable=False, default=None)
+    llm_prompt = Column(String(250), nullable=False, default=None)
+    llm_role = Column(String(100), nullable=False, default=None)
+    greeting_message = Column(String(250), nullable=False, default=None)
+    disclaimers = Column(String(500), nullable=False, default=None)
+    gdrive_enabled = Column(Boolean, nullable=False, default=False)
+    logo_link = Column(String(250), nullable=False, default=None)
+    updated_at = Column(DateTime, nullable=False, server_default=func.now())
+
+class KnowledgeBaseDocument(Base):
+    __tablename__ = "knowledgebase_documents"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_name = Column(String(250), nullable=True, index=True, default=None)
+    content_type = Column(String(250), nullable=True, index=True, default=None)
+    uploaded_at = Column(DateTime, nullable=False, server_default=func.now())

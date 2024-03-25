@@ -13,12 +13,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.main import app
 from app.common.email import fm
 from app.common.database import Base, get_session
-from app.models.user import User
+from app.models.user import User, Role
 from app.common.security import hash_password
 from app.services.auth import get_login_tokens
 
-USER_NAME = "Test User"
-USER_EMAIL = "testuser@email.com"
+USER_NAME = "Pytest"
+USER_EMAIL = "pytest@email.com"
 USER_PASSWORD = "TestUser@123"
 
 engine = create_engine("sqlite:///./fastapi.db")
@@ -67,40 +67,43 @@ async def auth_client(app_test, test_session, user):
 
 @pytest.fixture(scope="function")
 def inactive_user(test_session):
-    model = User()
-    model.name = USER_NAME
-    model.email = USER_EMAIL
-    model.password = hash_password(USER_PASSWORD)
-    model.updated_at = datetime.now(timezone.utc)
-    model.is_active = False
-    test_session.add(model)
+    user = User()
+    user.name = USER_NAME
+    user.email = USER_EMAIL
+    user.role = Role.User
+    user.password = hash_password(USER_PASSWORD)
+    user.updated_at = datetime.now(timezone.utc)
+    user.is_active = False
+    test_session.add(user)
     test_session.commit()
-    test_session.refresh(model)
-    return model
+    test_session.refresh(user)
+    return user
 
 @pytest.fixture(scope="function")
 def user(test_session):
-    model = User()
-    model.name = USER_NAME
-    model.email = USER_EMAIL
-    model.password = hash_password(USER_PASSWORD)
-    model.updated_at = datetime.now(timezone.utc)
-    model.verified_at = datetime.now(timezone.utc)
-    model.is_active = True
-    test_session.add(model)
+    user = User()
+    user.name = USER_NAME
+    user.email = USER_EMAIL
+    user.role = Role.User
+    user.password = hash_password(USER_PASSWORD)
+    user.updated_at = datetime.now(timezone.utc)
+    user.verified_at = datetime.now(timezone.utc)
+    user.is_active = True
+    test_session.add(user)
     test_session.commit()
-    test_session.refresh(model)
-    return model
+    test_session.refresh(user)
+    return user
 
 @pytest.fixture(scope="function")
 def unverified_user(test_session):
-    model = User()
-    model.name = USER_NAME
-    model.email = USER_EMAIL
-    model.password = hash_password(USER_PASSWORD)
-    model.updated_at = datetime.now(timezone.utc)
-    model.is_active = True
-    test_session.add(model)
+    user = User()
+    user.name = USER_NAME
+    user.email = USER_EMAIL
+    user.role = Role.User
+    user.password = hash_password(USER_PASSWORD)
+    user.updated_at = datetime.now(timezone.utc)
+    user.is_active = True
+    test_session.add(user)
     test_session.commit()
-    test_session.refresh(model)
-    return model
+    test_session.refresh(user)
+    return user

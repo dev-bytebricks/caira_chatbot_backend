@@ -39,3 +39,10 @@ docker-compose run fastapi-service /bin/sh -c "alembic downgrade -1"
 - Database Access [http://localhost:8080](http://localhost:8080) - use the above detail to login.
 - Mailpit [http://localhost:8025](http://localhost:8025)
 # fastapi-sqlalchemy-alembic
+
+
+# Build and push docker image for Azure Contaier Registry
+- az login
+- az acr login --name gdrivechatbot
+- docker build -t gdrivechatbot.azurecr.io/fastapi:latest -f Dockerfile.cloud .
+- docker push gdrivechatbot.azurecr.io/fastapi:latest
