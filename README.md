@@ -20,7 +20,7 @@ You do not need to change anything here, but if you would like to change the use
 - To stop the services you can press `Ctrl + C` - (Control + C)
 
 ### Commands
-- To Generate the Migration From Model
+- To Generate the Migration From Model (DONT RUN THIS, IN FACT USE THE EXISITNG VERSION)
 ```
 docker-compose run fastapi-service /bin/sh -c "alembic revision --autogenerate -m "create my table table""
 ```
@@ -34,8 +34,8 @@ docker-compose run fastapi-service /bin/sh -c "alembic downgrade -1"
 ```
 
 # Accessing the Applications
-- FastAPI Application Status [http://localhost:8000](http://localhost:8000)
-- API Documentation [http://localhost:8000/docs](http://localhost:8000/docs)
+- FastAPI Application Status [http://localhost:8001](http://localhost:8001)
+- API Documentation [http://localhost:8001/docs](http://localhost:8001/docs)
 - Database Access [http://localhost:8080](http://localhost:8080) - use the above detail to login.
 - Mailpit [http://localhost:8025](http://localhost:8025)
 # fastapi-sqlalchemy-alembic

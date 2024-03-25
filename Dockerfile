@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
+EXPOSE 8001
 
 # backend port changed to 8001 to avoid conflict with zep
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]

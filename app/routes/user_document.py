@@ -51,7 +51,8 @@ async def delete_documents(data: DeleteDocumentsRequest, username: str = Depends
 
 # get uploaded documents list from azure storage
 # users/documents/list -> Get Request, Response body: list of document details
-@user_document_router_protected.get("/list", status_code=status.HTTP_200_OK, response_model=DocumentsListResponse)
+@user_document_router_protected.get("/list", status_code=status.HTTP_200_OK)
 async def get_documents_list(username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
-    return await user_document.get_documents_list(username, session)
+    doc_list = await user_document.get_documents_list(username, session)
+    return doc_list.model_dump(exclude_none=True)
 
