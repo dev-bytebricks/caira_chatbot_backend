@@ -67,7 +67,7 @@ async def get_download_link_knowledge_base(file_name):
     sas_token = generate_blob_sas(
         account_name=settings.AZURE_STORAGE_ACCOUNT_NAME,
         account_key=settings.AZURE_STORAGE_ACCOUNT_KEY,
-        container_name=settings.AZURE_STORAGE_CONSUMER_CONTAINER_NAME,
+        container_name=settings.AZURE_STORAGE_KNOWLEDGE_BASE_CONTAINER_NAME,
         blob_name=blob_name,
         permission=BlobSasPermissions(read=True),
         expiry=datetime.now(timezone.utc) + timedelta(hours=1) # Token valid for 1 hour
@@ -85,7 +85,7 @@ async def get_download_link(username, file_name):
     sas_token = generate_blob_sas(
         account_name=settings.AZURE_STORAGE_ACCOUNT_NAME,
         account_key=settings.AZURE_STORAGE_ACCOUNT_KEY,
-        container_name=settings.AZURE_STORAGE_KNOWLEDGE_BASE_CONTAINER_NAME,
+        container_name=settings.AZURE_STORAGE_CONSUMER_CONTAINER_NAME,
         blob_name=blob_name,
         permission=BlobSasPermissions(read=True),
         expiry=datetime.now(timezone.utc) + timedelta(hours=1) # Token valid for 1 hour
