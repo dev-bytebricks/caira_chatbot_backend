@@ -1,14 +1,46 @@
 import io
+import json
+import logging
+from fastapi import HTTPException, status
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseDownload
 from PyPDF2 import PdfReader
-import streamlit as st
 from getfilelistpy import getfilelist
 import re
 from google.oauth2 import service_account
+from app.common.settings import get_settings
 
-SERVICE_ACCOUNT = st.session_state.global_config["Service_Account_Key"]
+settings = get_settings()
+
+async def get_files_from_link(url: str):
+    files_info = None
+    gdrive_extracted_id, gdrive_url_type = get_gdrive_id_and_type(url)
+
+    if gdrive_extracted_id:
+        if gdrive_url_type == "folder":
+            files_info = get_files_info_from_folder_id(gdrive_extracted_id)
+        else:
+            files_info = get_file_info_from_file_id(gdrive_extracted_id)
+        
+        if files_info is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unable to fetch {gdrive_url_type} info from google drive (Please make sure the resource exists and has been shared publicly)")
+        elif len(files_info) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unable to fetch {gdrive_url_type} info from google drive (File type not supported)")  
+    else:
+        logging.error("Please enter a valid google drive link")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid google drive link provided")
+
+    downloaded_files = []
+    for file_info in files_info:
+        try:
+            file_name, file_bytes, file_type = get_file_name_bytes_type(file_info)
+            downloaded_files.append({"file_bytes": file_bytes, "file_name": file_name, "file_type": file_type})
+        except Exception as ex:
+            logging.error(f"Error occured while downloading file from google drive. File name: {files_info['name']} | Error: {ex}")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                                detail=f"Error occured while downloading file from google drive. File name: {files_info['name']}")
+    return downloaded_files
 
 def get_gdrive_id_and_type(url:str):
     if url is None:
@@ -16,9 +48,10 @@ def get_gdrive_id_and_type(url:str):
 
     patterns = [
         (r"https?://drive\.google\.com/file/d/([a-zA-Z0-9_-]+)/?", "file"),
+        (r"https?://docs\.google\.com/document/d/([a-zA-Z0-9_-]+)/?", "file"),
         (r"https?://drive\.google\.com/drive/folders/([a-zA-Z0-9_-]+)", "folder"),
         (r"https?://drive\.google\.com/drive/u/\d/folders/([a-zA-Z0-9_-]+)", "folder"),
-        (r"https?://drive\.google\.com/.+/folders/([a-zA-Z0-9_-]+)", "folder"),
+        (r"https?://drive\.google\.com/.+/folders/([a-zA-Z0-9_-]+)", "folder")
     ]
 
     for pattern, type in patterns:
@@ -29,7 +62,7 @@ def get_gdrive_id_and_type(url:str):
     return None, None
 
 def get_file_info_from_file_id(file_id:str):
-    creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT)
+    creds = service_account.Credentials.from_service_account_info(settings.GOOGLE_SERVICE_ACCOUNT_CREDS)
 
     try:
         # create drive api client
@@ -41,13 +74,13 @@ def get_file_info_from_file_id(file_id:str):
                 return [response]
         return []
     except HttpError as error:
-        st.error(f"An error occurred: {error}")
+        logging.error(f"An error occurred: {error}")
         return None
 
 def get_files_info_from_folder_id(folder_id:str):
+    creds = service_account.Credentials.from_service_account_info(settings.GOOGLE_SERVICE_ACCOUNT_CREDS)
+    
     try:
-        # check if folder is accesible
-        creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT)
         service = build("drive", "v3", credentials=creds)
         res = service.files().get(fileId=folder_id, fields="id, name, mimeType", supportsAllDrives=True).execute()
 
@@ -58,11 +91,11 @@ def get_files_info_from_folder_id(folder_id:str):
         }
         res = getfilelist.GetFileList(resource)
     except Exception as error:
-        st.error(f"An error occurred: {error}")
+        logging.error(f"An error occurred: {error}")
         return None
 
     if res is None or res.get("fileList") is None:
-        st.error(f"An error occurred: Unable to list files in folder")
+        logging.error(f"An error occurred: Unable to list files in folder")
         return None
     
     finalFilesList = []
@@ -77,7 +110,7 @@ def get_files_info_from_folder_id(folder_id:str):
     return finalFilesList
 
 def get_google_unsupported_file_content(file_id):
-    creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT)
+    creds = service_account.Credentials.from_service_account_info(settings.GOOGLE_SERVICE_ACCOUNT_CREDS)
 
     try:
         # create drive api client
@@ -90,13 +123,13 @@ def get_google_unsupported_file_content(file_id):
             status, done = downloader.next_chunk()
 
     except HttpError as error:
-        st.error(f"An error occurred: {error}")
-        file = None
+        logging.error(f"An error occurred: {error}")
+        raise error
 
-    return file.getvalue()
+    return file
 
 def get_google_supported_file_content(file_id):
-    creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT)
+    creds = service_account.Credentials.from_service_account_info(settings.GOOGLE_SERVICE_ACCOUNT_CREDS)
 
     try:
         # create drive api client
@@ -111,25 +144,42 @@ def get_google_supported_file_content(file_id):
             status, done = downloader.next_chunk()
 
     except HttpError as error:
-        st.write(f"An error occurred: {error}")
-        file = None
+        logging.error(f"An error occurred: {error}")
+        raise error
 
-    return file.getvalue()
+    return file
 
-def get_file_content(file):
+def get_file_content_string(file):
+    file_content = None
+    if file["mimeType"] == "application/vnd.google-apps.document":
+        file_content = get_google_supported_file_content(file['id'])
+        pdf_reader = PdfReader(file_content)
+        file_content = '\n'.join([page.extract_text() for i, page in enumerate(pdf_reader.pages)])
+    else:
+        file_content = get_google_unsupported_file_content(file['id'])
+        if (file["mimeType"] == "application/pdf"):
+            pdf_reader = PdfReader(file_content)
+            file_content = '\n'.join([page.extract_text() for i, page in enumerate(pdf_reader.pages)])
+        else:
+            file_content.seek(0)
+            content_bytes = file_content.read()
+            file_content = content_bytes.decode('utf-8')
+    return file_content
+
+def get_file_name_bytes_type(file):
     filecontent = None
+    filetype = None
+    filename = file["name"]
+
+    # convert google docs document to pdf and pdf extension
     if file["mimeType"] == "application/vnd.google-apps.document":
         filecontent = get_google_supported_file_content(file['id'])
-        pdf_reader = PdfReader(io.BytesIO(filecontent))
-        filecontent = '\n'.join([page.extract_text() for i, page in enumerate(pdf_reader.pages)])
+        filetype = "application/pdf"
+        filename += ".pdf"
     else:
         filecontent = get_google_unsupported_file_content(file['id'])
-        if (file["mimeType"] == "application/pdf"):
-            pdf_reader = PdfReader(io.BytesIO(filecontent))
-            filecontent = '\n'.join([page.extract_text() for i, page in enumerate(pdf_reader.pages)])
-        else:
-            filecontent = str(filecontent, 'utf-8')
-    return filecontent
+        filetype = file["mimeType"]
+    return filename, filecontent, filetype
 
 def display_file_info(file):
     filetype = file["mimeType"]

@@ -1,4 +1,5 @@
 from functools import lru_cache
+import json
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 from urllib.parse import quote_plus
@@ -52,7 +53,8 @@ class Settings(BaseSettings):
     # Azure Storage Config
     AZURE_STORAGE_ACCOUNT_KEY: str
     AZURE_STORAGE_ACCOUNT_NAME: str
-    AZURE_STORAGE_CONTAINER_NAME: str
+    AZURE_STORAGE_CONSUMER_CONTAINER_NAME: str
+    AZURE_STORAGE_KNOWLEDGE_BASE_CONTAINER_NAME: str
     AZURE_STORAGE_CONNECTION_STRING: str
 
     # OpenAI Config
@@ -67,6 +69,13 @@ class Settings(BaseSettings):
     # ZEP Config
     ZEP_API_URL: str
 
+    # Google Cloud Service Account JSON
+    GOOGLE_SERVICE_ACCOUNT_JSON: str
+
+    @property
+    def GOOGLE_SERVICE_ACCOUNT_CREDS(self) -> str:
+        return json.loads(self.GOOGLE_SERVICE_ACCOUNT_JSON)
+    
     # Pydantic Settings
     model_config = SettingsConfigDict(extra= "ignore", env_file= find_dotenv(".env"), case_sensitive=True)
 

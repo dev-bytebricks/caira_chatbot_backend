@@ -1,7 +1,5 @@
-from io import BytesIO, StringIO
 import logging
 import time
-import pdfplumber
 from pinecone import Pinecone, PodSpec
 import tiktoken
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -44,18 +42,36 @@ async def delete_file(username, file_name):
         logging.error(f"Error occured while deleting file from Pinecone | File Name: {file_name} | Error: {ex}")
         return {"filename": file_name, "status": "failed", "error": str(ex)}
 
-# For consumers only
-async def upload_file(username, file_content, file_name, content_type):
+# For knowledge base only
+async def delete_file_knowledge_base(file_name):
     try:
-        if content_type == 'application/pdf':
-            with pdfplumber.open(BytesIO(file_content)) as filereader:
-                file_content = ' '.join([page.extract_text() or "" for page in filereader.pages])
-        else:
-            stringio = StringIO(file_content.decode('utf-8'))
-            file_content = stringio.read()
+        document_id = file_name
+        index = pinecone_instance.Index(settings.PINECONE_KNOWLEDGE_BASE_INDEX)
+        index.delete(
+            namespace=None,
+            filter={"document_id": {"$eq": document_id}}
+        )
+        return {"filename": file_name, "status": "success"}
+    except Exception as ex:
+        logging.error(f"Error occured while deleting file from Pinecone | File Name: {file_name} | Error: {ex}")
+        return {"filename": file_name, "status": "failed", "error": str(ex)}
 
-        file_to_upload = [Document(page_content=file_content, metadata={"document_id": f"{username}/{file_name}"})]
+# For consumers only
+async def upload_file(username, file_content_str, file_name):
+    try:
+        file_to_upload = [Document(page_content=file_content_str, metadata={"document_id": f"{username}/{file_name}"})]
         vectorize_and_upload_documents(chunk_documents_by_tpm(file_to_upload), settings.PINECONE_CONSUMER_INDEX, username)
+        return {"filename": file_name, "status": "success"}
+   
+    except Exception as ex:
+        logging.error(f"Error occured while uploading file to Pinecone | File Name: {file_name} | Error: {ex}")
+        return {"filename": file_name, "status": "failed", "error": str(ex)}
+
+# For knowledge base only
+async def upload_file_knowledge_base(file_content_str, file_name):
+    try:
+        file_to_upload = [Document(page_content=file_content_str, metadata={"document_id": file_name})]
+        vectorize_and_upload_documents(chunk_documents_by_tpm(file_to_upload), settings.PINECONE_KNOWLEDGE_BASE_INDEX, None)
         return {"filename": file_name, "status": "success"}
    
     except Exception as ex:

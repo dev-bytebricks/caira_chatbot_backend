@@ -1,6 +1,5 @@
 from typing import Optional
 from pydantic import BaseModel
-from datetime import datetime
 
 class UpdateAdminConfigRequest(BaseModel):
     llm_model_name: Optional[str] = None

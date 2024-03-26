@@ -87,3 +87,10 @@ watchfiles==0.21.0
 websockets==12.0
 yarl==1.9.4
 zep-python==1.5.0
+google-api-core==2.16.1
+google-api-python-client==2.116.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+googleapis-common-protos==1.62.0
+pypdf2==3.0.1
+getfilelistpy==1.0.7
