@@ -22,6 +22,6 @@ jobs:
         with:
           appSourcePath: ${{ github.workspace }}
           dockerfilePath: Dockerfile.cloud
-          acrName: gdrivechatbot.azurecr.io
+          acrName: gdrivechatbot
           imageToBuild: gdrivechatbot.azurecr.io/fastapi:latest
           resourceGroup: chatbot
