@@ -1,19 +1,25 @@
+import logging
 from app.common.settings import get_settings
-from app.common.adminconfig import OPENAI_MODEL_NAME, OPENAI_MODEL_TEMPERATURE
+from app.common.adminconfig import AdminConfig
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
-openAIEmbeddings = OpenAIEmbeddings(model="text-embedding-ada-002", openai_api_key=settings.OPENAI_API_KEY)
-openAIChat = None
+class OpenAIManager:
 
-def update_openai_chat_instance():
-    global openAIChat
-    openAIChat = ChatOpenAI(
-        model=OPENAI_MODEL_NAME, 
-        openai_api_key=settings.OPENAI_API_KEY,
-        temperature=OPENAI_MODEL_TEMPERATURE
-        )
-        
+    OPENAI_EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-ada-002", openai_api_key=settings.OPENAI_API_KEY)
+    OPENAI_CHAT: ChatOpenAI
+
+    @classmethod
+    def update_openai_chat_instance(cls):
+        cls.OPENAI_CHAT = ChatOpenAI(
+            model=AdminConfig.OPENAI_MODEL_NAME, 
+            openai_api_key=settings.OPENAI_API_KEY,
+            temperature=AdminConfig.OPENAI_MODEL_TEMPERATURE
+            )
+        logger.info(f"OpenAI chat client updated")
+
 # setup openAIChat at startup
-update_openai_chat_instance()
+OpenAIManager.update_openai_chat_instance()
+

@@ -1,67 +1,60 @@
 import logging
 from app.common.database import SessionLocal
-from app.models.user import AdminConfig
+from app.models.user import AdminConfig as AdminConfigModel
 
 logger = logging.getLogger(__name__)
 
-OPENAI_MODEL_NAME = None
-OPENAI_MODEL_TEMPERATURE = None
-LLM_PROMPT = None
-LLM_ROLE = None
-GREETING_MESSAGE = None
-DISCLAIMERS = None
-GDRIVE_ENABLED = None
-LOGO_LINK = None
+class AdminConfig:
+    OPENAI_MODEL_NAME: str
+    OPENAI_MODEL_TEMPERATURE: int
+    LLM_PROMPT : str
+    LLM_ROLE: str
+    GREETING_MESSAGE: str
+    DISCLAIMERS: str
+    GDRIVE_ENABLED: str
+    LOGO_LINK: str
 
-def update_config():
-    try:
-        global OPENAI_MODEL_NAME
-        global OPENAI_MODEL_TEMPERATURE
-        global LLM_PROMPT
-        global LLM_ROLE
-        global GREETING_MESSAGE
-        global DISCLAIMERS
-        global GDRIVE_ENABLED
-        global LOGO_LINK
+    @classmethod
+    def update_config(cls):
+        try:
+            session = SessionLocal()
+            admin_config = session.query(AdminConfigModel).first()
+            if admin_config:
+                cls.OPENAI_MODEL_NAME = admin_config.llm_model_name
+                cls.OPENAI_MODEL_TEMPERATURE = admin_config.llm_temperature
+                cls.LLM_PROMPT = admin_config.llm_prompt
+                cls.LLM_ROLE = admin_config.llm_role
+                cls.GREETING_MESSAGE = admin_config.greeting_message
+                cls.DISCLAIMERS = admin_config.disclaimers
+                cls.GDRIVE_ENABLED = admin_config.gdrive_enabled
+                cls.LOGO_LINK = admin_config.logo_link
+                logger.info(f"Admin config updated")
+            else:
+                logger.warn(f"No admin config in database | Inserting in database and using default admin config")
+                admin_config = AdminConfigModel()
+                cls.OPENAI_MODEL_NAME = admin_config.llm_model_name = "gpt-4-turbo-preview"
+                cls.OPENAI_MODEL_TEMPERATURE = admin_config.llm_temperature = 0.4
+                cls.LLM_PROMPT = admin_config.llm_prompt = ""
+                cls.LLM_ROLE = admin_config.llm_role = "helpful assistant"
+                cls.GREETING_MESSAGE = admin_config.greeting_message = "Hi! I am Caira."
+                cls.DISCLAIMERS = admin_config.disclaimers = "Put your disclaimers"
+                cls.GDRIVE_ENABLED = admin_config.gdrive_enabled = False
+                cls.LOGO_LINK = admin_config.logo_link = "logo_link"
+                session.add(admin_config)
+                session.commit()
 
-        session = SessionLocal()
-        admin_config = session.query(AdminConfig).first()
-        if admin_config:
-            OPENAI_MODEL_NAME = admin_config.llm_model_name
-            OPENAI_MODEL_TEMPERATURE = admin_config.llm_temperature
-            LLM_PROMPT = admin_config.llm_prompt
-            LLM_ROLE = admin_config.llm_role
-            GREETING_MESSAGE = admin_config.greeting_message
-            DISCLAIMERS = admin_config.disclaimers
-            GDRIVE_ENABLED = admin_config.gdrive_enabled
-            LOGO_LINK = admin_config.logo_link
-            logger.info(f"Admin config updated")
-        else:
-            logger.warn(f"No admin config in database | Inserting in database and using default admin config")
-            admin_config = AdminConfig()
-            OPENAI_MODEL_NAME = admin_config.llm_model_name = "gpt-4-turbo-preview"
-            OPENAI_MODEL_TEMPERATURE = admin_config.llm_temperature = 0.4
-            LLM_PROMPT = admin_config.llm_prompt = ""
-            LLM_ROLE = admin_config.llm_role = "helpful assistant"
-            GREETING_MESSAGE = admin_config.greeting_message = "Hi! I am Caira."
-            DISCLAIMERS = admin_config.disclaimers = "Put your disclaimers"
-            GDRIVE_ENABLED = admin_config.gdrive_enabled = False
-            LOGO_LINK = admin_config.logo_link = "logo_link"
-            session.add(admin_config)
-            session.commit()
-
-    except Exception as ex:
-        logger.error(f"Exception occured while reading admin config from database | Using default admin config | Error: {ex}")
-        OPENAI_MODEL_NAME = "gpt-4-turbo-preview"
-        OPENAI_MODEL_TEMPERATURE = 0.4
-        LLM_PROMPT = ""
-        LLM_ROLE = "helpful assistant"
-        GREETING_MESSAGE = "Hi! I am Caira."
-        DISCLAIMERS = "Put your cisclaimers"
-        GDRIVE_ENABLED = False
-        LOGO_LINK = "logo_link"
-    finally:
-        session.close()
+        except Exception as ex:
+            logger.error(f"Exception occured while reading admin config from database | Using default admin config | Error: {ex}")
+            cls.OPENAI_MODEL_NAME = "gpt-4-turbo-preview"
+            cls.OPENAI_MODEL_TEMPERATURE = 0.4
+            cls.LLM_PROMPT = ""
+            cls.LLM_ROLE = "helpful assistant"
+            cls.GREETING_MESSAGE = "Hi! I am Caira."
+            cls.DISCLAIMERS = "Put your cisclaimers"
+            cls.GDRIVE_ENABLED = False
+            cls.LOGO_LINK = "logo_link"
+        finally:
+            session.close()
         
 # setup admin config at startup
-update_config()
+AdminConfig.update_config()

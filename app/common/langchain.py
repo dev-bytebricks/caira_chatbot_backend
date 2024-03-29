@@ -1,7 +1,7 @@
-from app.common.openai import openAIChat
+from app.common.openai import OpenAIManager
 from app.common.settings import get_settings
 from app.common.vectorstore import get_vector_store_instance
-from app.common.adminconfig import LLM_ROLE, LLM_PROMPT
+from app.common.adminconfig import AdminConfig
 from app.models.user import UserDocument
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.tools.retriever import create_retriever_tool
@@ -44,14 +44,14 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
     tools = [consumer_retriever_tool, kb_retriever_tool]
 
     retriever_prompt = ChatPromptTemplate.from_messages([
-        ('system', f"""You are a {LLM_ROLE}. You should always use the provided tools to respond. {LLM_PROMPT}"""),
+        ('system', f"""You are a {AdminConfig.LLM_ROLE}. You should always use the provided tools to respond. {AdminConfig.LLM_PROMPT}"""),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad")
     ])
-
+    
     agent = create_openai_functions_agent(
-        llm=openAIChat,
+        llm=OpenAIManager.OPENAI_CHAT,
         prompt=retriever_prompt,
         tools=tools,
     )
@@ -80,14 +80,14 @@ def construct_kb_chain():
     tools = [retriever_tool]
 
     retriever_prompt = ChatPromptTemplate.from_messages([
-        ('system', f"""You are a {LLM_ROLE}. You should always use the provided tool to respond. {LLM_PROMPT}"""),
+        ('system', f"""You are a {AdminConfig.LLM_ROLE}. You should always use the provided tool to respond. {AdminConfig.LLM_PROMPT}"""),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad")
     ])
 
     agent = create_openai_functions_agent(
-        llm=openAIChat,
+        llm=OpenAIManager.OPENAI_CHAT,
         prompt=retriever_prompt,
         tools=tools,
     )
@@ -116,7 +116,7 @@ def get_suggested_questions_chain():
     chain = (
         {"chat_history": itemgetter("chat_history")}
         | prompt
-        | openAIChat
+        | OpenAIManager.OPENAI_CHAT
         | StrOutputParser()
     )
 

@@ -6,7 +6,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.documents import Document
 from app.common.settings import get_settings
-from app.common import openai
+from app.common.openai import OpenAIManager
 import os
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ if settings.PINECONE_CONSUMER_INDEX not in pinecone_instance.list_indexes().name
     print(f"Updated pinecone indexes: {pinecone_instance.list_indexes()}")
 
 def get_vector_store_instance(index_name, namespace):
-    return PineconeVectorStore.from_existing_index(index_name, openai.openAIEmbeddings, namespace=namespace)
+    return PineconeVectorStore.from_existing_index(index_name, OpenAIManager.OPENAI_EMBEDDINGS, namespace=namespace)
 
 # For consumers only
 async def delete_file(username, file_name):

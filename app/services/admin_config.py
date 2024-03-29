@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
-from app.models.user import AdminConfig
-from app.common import adminconfig
+from app.models.user import AdminConfig as AdminConfigModel
+from app.common.adminconfig import AdminConfig
+from app.common.openai import OpenAIManager
 
 async def update_admin_config(data, session):
     admin_config = await get_admin_config(session)
@@ -16,10 +17,11 @@ async def update_admin_config(data, session):
     admin_config.updated_at = datetime.now(timezone.utc)
     session.add(admin_config)
     session.commit()
-    adminconfig.update_config()
+    AdminConfig.update_config()
+    OpenAIManager.update_openai_chat_instance()
 
 async def get_admin_config(session):
-    admin_config = session.query(AdminConfig).first()
+    admin_config = session.query(AdminConfigModel).first()
     if admin_config is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No admin config found in database")
     return admin_config
