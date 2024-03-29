@@ -47,7 +47,7 @@ async def _upload_file_to_services(file_content: BytesIO, file_name: str, file_t
         return {"filename": file_name, "content_type": file_type, "status": "failed", "errors": [f"Error occured while converting bytes to string. File name: {file_name}, File Type: {file_type}"]}
     
     # concurrency control of uploading processes
-    with asyncio.Semaphore(settings.SEMAPHORE_LIMIT):
+    async with asyncio.Semaphore(settings.SEMAPHORE_LIMIT):
         pinecone_upload_task = vectorstore.upload_file_knowledge_base(file_content_str, file_name)
         azure_upload_task = azurecloud.upload_file_knowledge_base(file_content_clone2, file_name, file_type)
         results = await asyncio.gather(azure_upload_task, pinecone_upload_task, return_exceptions=False)
@@ -82,7 +82,7 @@ async def _upload_file_to_services(file_content: BytesIO, file_name: str, file_t
 async def _delete_file_from_services(filename: str):
 
     # concurrency control of deleting processes
-    with asyncio.Semaphore(settings.SEMAPHORE_LIMIT):
+    async with asyncio.Semaphore(settings.SEMAPHORE_LIMIT):
         azure_delete_task = azurecloud.delete_file_knowledge_base(filename)
         pinecone_delete_task = vectorstore.delete_file_knowledge_base(filename)
         results = await asyncio.gather(azure_delete_task, pinecone_delete_task, return_exceptions=False)
