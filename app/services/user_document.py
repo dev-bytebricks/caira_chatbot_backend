@@ -4,10 +4,15 @@ import logging
 from typing import List
 from PyPDF2 import PdfReader
 from fastapi import HTTPException, UploadFile, status
+from app.common.settings import get_settings
 from app.models.user import UserDocument
 from app.schemas.responses.user_document import FileInfo, UploadDocumentsResponse, DeleteDocumentsResponse, DocumentsListResponse
 from app.common import vectorstore, gdrive, azurecloud
 from sqlalchemy.orm import Session, joinedload
+
+settings = get_settings()
+
+logger = logging.getLogger(__name__)
 
 def _bytes_to_string(file_name, file_bytes, file_type):
     try:
@@ -19,7 +24,7 @@ def _bytes_to_string(file_name, file_bytes, file_type):
             file_content = stringio.read()
         return file_content
     except Exception as ex:
-        logging.error(f"Error occured while converting bytes to string. File name: {file_name}, File Type: {file_type}, Error: {ex}")
+        logger.error(f"Error occured while converting bytes to string. File name: {file_name}, File Type: {file_type}, Error: {ex}")
         return None
     
 async def _clone_content(original: BytesIO):
@@ -41,11 +46,12 @@ async def _upload_file_to_services(username: str, file_content: BytesIO, file_na
     if file_content_str is None:
         return {"filename": file_name, "content_type": file_type, "status": "failed", "errors": [f"Error occured while converting bytes to string. File name: {file_name}, File Type: {file_type}"]}
     
-    pinecone_upload_task = vectorstore.upload_file(username, file_content_str, file_name)
-    azure_upload_task = azurecloud.upload_file(username, file_content_clone2, file_name, file_type)
-    
-    results = await asyncio.gather(azure_upload_task, pinecone_upload_task, return_exceptions=False)
-    azure_result, pinecone_result = results
+    # concurrency control of uploading processes
+    with asyncio.Semaphore(settings.SEMAPHORE_LIMIT):
+        pinecone_upload_task = vectorstore.upload_file(username, file_content_str, file_name)
+        azure_upload_task = azurecloud.upload_file(username, file_content_clone2, file_name, file_type)
+        results = await asyncio.gather(azure_upload_task, pinecone_upload_task, return_exceptions=False)
+        azure_result, pinecone_result = results
     
     # Initialize response structure
     response = {"filename": file_name, "content_type": file_type, "status": "success", "errors": []}
@@ -56,12 +62,12 @@ async def _upload_file_to_services(username: str, file_content: BytesIO, file_na
         if azure_result["status"] == "success":
             azure_file_delete_result = await azurecloud.delete_file(username, file_name)
             if azure_file_delete_result["status"] == "failed":
-                logging.error(f'Compensation deleting failed during upload rollback | File Name: {file_name} | Service: Azure | Error: {azure_file_delete_result["error"]}')
+                logger.error(f'Compensation deleting failed during upload rollback | File Name: {file_name} | Service: Azure | Error: {azure_file_delete_result["error"]}')
         
         if pinecone_result["status"] == "success":
             pinecone_file_delete_result = await vectorstore.delete_file(username, file_name)
             if pinecone_file_delete_result["status"] == "failed":
-                logging.error(f'Compensation deleting failed during upload rollback | File Name: {file_name} | Service: Pinecone | Error: {pinecone_file_delete_result["error"]}')    
+                logger.error(f'Compensation deleting failed during upload rollback | File Name: {file_name} | Service: Pinecone | Error: {pinecone_file_delete_result["error"]}')    
         
         if azure_result["status"] == "failed":
             response["errors"].append(f'service: Azure, error: {azure_result["error"]}')
@@ -74,10 +80,13 @@ async def _upload_file_to_services(username: str, file_content: BytesIO, file_na
     return response
 
 async def _delete_file_from_services(username: str, filename: str):
-    azure_delete_task = azurecloud.delete_file(username, filename)
-    pinecone_delete_task = vectorstore.delete_file(username, filename)
-    results = await asyncio.gather(azure_delete_task, pinecone_delete_task, return_exceptions=False)
-    azure_result, pinecone_result = results
+
+    # concurrency control of deleting processes
+    with asyncio.Semaphore(settings.SEMAPHORE_LIMIT):
+        azure_delete_task = azurecloud.delete_file(username, filename)
+        pinecone_delete_task = vectorstore.delete_file(username, filename)
+        results = await asyncio.gather(azure_delete_task, pinecone_delete_task, return_exceptions=False)
+        azure_result, pinecone_result = results
     
     # Initialize response structure
     response = {"filename": filename, "status": "success", "errors": []}
@@ -87,11 +96,11 @@ async def _delete_file_from_services(username: str, filename: str):
 
         if azure_result["status"] == "failed":
             response["errors"].append(f'service: Azure, error: {azure_result["error"]}')
-            logging.error(f'Deleting failed | File Name: {filename} | Service: Azure | Error: {azure_result["error"]}')
+            logger.error(f'Deleting failed | File Name: {filename} | Service: Azure | Error: {azure_result["error"]}')
 
         if pinecone_result["status"] == "failed":
             response["errors"].append(f'service: Pinecone, error: {pinecone_result["error"]}')
-            logging.error(f'Deleting failed | File Name: {filename} | Service: Pinecone | Error: {pinecone_result["error"]}') 
+            logger.error(f'Deleting failed | File Name: {filename} | Service: Pinecone | Error: {pinecone_result["error"]}') 
 
         response["status"] = "failed"
     
@@ -119,7 +128,7 @@ async def upload_documents(files: List[UploadFile], username, session: Session):
                 session.commit()
                 uploaded_files.append(FileInfo(filename=filename, content_type=content_type))
             except Exception as ex:
-                logging.error(f"Uploading failed | File Name: {filename} | Database Error: {ex}")
+                logger.error(f"Uploading failed | File Name: {filename} | Database Error: {ex}")
                 failed_files.append(FileInfo(filename=filename, content_type=content_type, error=f"Database Error: {ex}"))
         else:
             failed_files.append(FileInfo(filename=filename, content_type=content_type, error=" | ".join(task_result["errors"])))
@@ -151,7 +160,7 @@ async def upload_documents_gdrivelink(gdrivelink, username, session):
                 session.commit()
                 uploaded_files.append(FileInfo(filename=filename, content_type=content_type))
             except Exception as ex:
-                logging.error(f"Uploading failed | File Name: {filename} | Database Error: {ex}")
+                logger.error(f"Uploading failed | File Name: {filename} | Database Error: {ex}")
                 failed_files.append(FileInfo(filename=filename, content_type=content_type, error=f"Database Error: {ex}"))
         else:
             failed_files.append(FileInfo(filename=filename, content_type=content_type, error=" | ".join(task_result["errors"])))
@@ -188,13 +197,13 @@ async def delete_documents(file_names, username, session: Session):
         filename = task_result["filename"]
         try:
             if task_result["status"] == "failed":
-                logging.error(f'Unable delete file from services | File Name: {filename} | Error: {" | ".join(task_result["errors"])}')
+                logger.error(f'Unable delete file from services | File Name: {filename} | Error: {" | ".join(task_result["errors"])}')
             session.query(UserDocument)\
                 .filter(UserDocument.user_id == username, UserDocument.document_name == filename).delete(synchronize_session='fetch')
             session.commit()
             deleted_files.append(FileInfo(filename=filename))
         except Exception as ex:
-            logging.error(f"Deleting failed | File Name: {filename} | Database Error: {ex}")
+            logger.error(f"Deleting failed | File Name: {filename} | Database Error: {ex}")
             failed_files.append(FileInfo(filename=filename, error=f"Database Error: {ex}"))
     
     return DeleteDocumentsResponse(deleted_files=deleted_files, failed_files=failed_files)

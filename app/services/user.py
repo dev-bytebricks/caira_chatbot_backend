@@ -8,6 +8,8 @@ from app.models.user import AdminConfig, User
 from app.services import email
 from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT
 
+logger = logging.getLogger(__name__)
+
 def _verify_user(user: User):
     # Verify the email
     # Verify that user account is verified
@@ -71,7 +73,7 @@ async def activate_user_account(data, session, background_tasks):
     try:
         token_valid = verify_password(user_token, data.token)
     except Exception as verify_exec:
-        logging.exception(verify_exec)
+        logger.exception(verify_exec)
         token_valid = False
     if not token_valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
@@ -108,7 +110,7 @@ async def reset_user_password(data, session):
     try:
         token_valid = verify_password(user_token, data.token)
     except Exception as verify_exec:
-        logging.exception(verify_exec)
+        logger.exception(verify_exec)
         token_valid = False
     if not token_valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
@@ -124,18 +126,18 @@ async def logout_user(username, session):
 
 async def _check_user_in_zep(user_id):
     if getzep.check_user_exists(user_id):
-        logging.error("User with this email already exists in Zep.")
+        logger.error("User with this email already exists in Zep.")
         raise HTTPException(status_code=400, detail="User with this email already exists in Zep.")
 
     if len(getzep.get_all_sessions_of_user(user_id)) > 0:
-        logging.error(f'Zep session already registered for user')
+        logger.error(f'Zep session already registered for user')
         raise HTTPException(status_code=400, detail="Zep session already registered for user.")
     
 async def _add_user_to_zep(user):
     if not getzep.check_user_exists(user.email):
         getzep.add_new_user(user.email, "emailid", user.name)
     else:
-        logging.error("User with this email already exists in Zep.")
+        logger.error("User with this email already exists in Zep.")
         raise HTTPException(status_code=400, detail="User with this email already exists in Zep.")
 
     user_all_sessions = getzep.get_all_sessions_of_user(user.email)
@@ -143,7 +145,7 @@ async def _add_user_to_zep(user):
         getzep.add_session(user_id=user.email, sessionid=uuid.uuid4().hex)
         user_all_sessions = getzep.get_all_sessions_of_user(user.email)
     else:
-        logging.error(f'Zep session already registered for user, session: {user_all_sessions}')
+        logger.error(f'Zep session already registered for user, session: {user_all_sessions}')
         raise HTTPException(status_code=400, detail="Zep session already registered for user.")
     
 async def fetch_app_info(session):

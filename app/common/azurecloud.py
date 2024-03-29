@@ -4,6 +4,8 @@ from app.common.settings import get_settings
 from azure.storage.blob.aio import ContainerClient as ContainerClientAsync
 from azure.storage.blob import generate_blob_sas, BlobSasPermissions, ContentSettings, ContainerClient
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
 
 consumer_container_client_async: ContainerClientAsync = ContainerClientAsync.from_connection_string(
@@ -33,7 +35,7 @@ async def upload_file_knowledge_base(file_content, file_name, content_type):
                                            metadata={'uploaded_at': str(datetime.now(timezone.utc))})
         return {"filename": file_name, "status": "success"}
     except Exception as ex:
-        logging.error(f"Error occured while uploading file to Azure Storage | Blob: {blob_name} | Error: {ex}")
+        logger.error(f"Error occured while uploading file to Azure Storage | Blob: {blob_name} | Error: {ex}")
         return {"filename": file_name, "status": "failed", "error": str(ex)}
 
 async def upload_file(username, file_content, file_name, content_type):
@@ -46,7 +48,7 @@ async def upload_file(username, file_content, file_name, content_type):
                                            metadata={'uploaded_at': str(datetime.now(timezone.utc)), 'user_id': username})
         return {"filename": file_name, "status": "success"}
     except Exception as ex:
-        logging.error(f"Error occured while uploading file to Azure Storage | Blob: {blob_name} | Error: {ex}")
+        logger.error(f"Error occured while uploading file to Azure Storage | Blob: {blob_name} | Error: {ex}")
         return {"filename": file_name, "status": "failed", "error": str(ex)}
 
 def blob_exists(blob_name):
@@ -101,10 +103,10 @@ async def delete_file_knowledge_base(file_name):
             blob_client.delete_blob()
             return {"filename": file_name, "status": "success"}
         else:
-            logging.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: Blob not found in container. Skipping deletion.")
+            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: Blob not found in container. Skipping deletion.")
             return {"filename": file_name, "status": "failed", "error": f"Blob {blob_name} not found in container."}
     except Exception as ex:
-            logging.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: {ex}")
+            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: {ex}")
             return {"filename": file_name, "status": "failed", "error": str(ex)}
 
 async def delete_file(username, file_name):
@@ -115,8 +117,8 @@ async def delete_file(username, file_name):
             blob_client.delete_blob()
             return {"filename": file_name, "status": "success"}
         else:
-            logging.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: Blob not found in container. Skipping deletion.")
+            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: Blob not found in container. Skipping deletion.")
             return {"filename": file_name, "status": "failed", "error": f"Blob {blob_name} not found in container."}
     except Exception as ex:
-            logging.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: {ex}")
+            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: {ex}")
             return {"filename": file_name, "status": "failed", "error": str(ex)}

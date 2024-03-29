@@ -1,5 +1,4 @@
 import io
-import json
 import logging
 from fastapi import HTTPException, status
 from googleapiclient.discovery import build
@@ -10,6 +9,8 @@ from getfilelistpy import getfilelist
 import re
 from google.oauth2 import service_account
 from app.common.settings import get_settings
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -28,7 +29,7 @@ async def get_files_from_link(url: str):
         elif len(files_info) == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unable to fetch {gdrive_url_type} info from google drive (File type not supported)")  
     else:
-        logging.error("Please enter a valid google drive link")
+        logger.error("Please enter a valid google drive link")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid google drive link provided")
 
     downloaded_files = []
@@ -37,7 +38,7 @@ async def get_files_from_link(url: str):
             file_name, file_bytes, file_type = get_file_name_bytes_type(file_info)
             downloaded_files.append({"file_bytes": file_bytes, "file_name": file_name, "file_type": file_type})
         except Exception as ex:
-            logging.error(f"Error occured while downloading file from google drive. File name: {files_info['name']} | Error: {ex}")
+            logger.error(f"Error occured while downloading file from google drive. File name: {files_info['name']} | Error: {ex}")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
                                 detail=f"Error occured while downloading file from google drive. File name: {files_info['name']}")
     return downloaded_files
@@ -74,7 +75,7 @@ def get_file_info_from_file_id(file_id:str):
                 return [response]
         return []
     except HttpError as error:
-        logging.error(f"An error occurred: {error}")
+        logger.error(f"An error occurred: {error}")
         return None
 
 def get_files_info_from_folder_id(folder_id:str):
@@ -91,11 +92,11 @@ def get_files_info_from_folder_id(folder_id:str):
         }
         res = getfilelist.GetFileList(resource)
     except Exception as error:
-        logging.error(f"An error occurred: {error}")
+        logger.error(f"An error occurred: {error}")
         return None
 
     if res is None or res.get("fileList") is None:
-        logging.error(f"An error occurred: Unable to list files in folder")
+        logger.error(f"An error occurred: Unable to list files in folder")
         return None
     
     finalFilesList = []
@@ -123,7 +124,7 @@ def get_google_unsupported_file_content(file_id):
             status, done = downloader.next_chunk()
 
     except HttpError as error:
-        logging.error(f"An error occurred: {error}")
+        logger.error(f"An error occurred: {error}")
         raise error
 
     return file
@@ -144,7 +145,7 @@ def get_google_supported_file_content(file_id):
             status, done = downloader.next_chunk()
 
     except HttpError as error:
-        logging.error(f"An error occurred: {error}")
+        logger.error(f"An error occurred: {error}")
         raise error
 
     return file

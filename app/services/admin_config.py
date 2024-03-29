@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from app.models.user import AdminConfig
+from app.common import adminconfig
 
 async def update_admin_config(data, session):
     admin_config = await get_admin_config(session)
@@ -15,6 +16,7 @@ async def update_admin_config(data, session):
     admin_config.updated_at = datetime.now(timezone.utc)
     session.add(admin_config)
     session.commit()
+    adminconfig.update_config()
 
 async def get_admin_config(session):
     admin_config = session.query(AdminConfig).first()

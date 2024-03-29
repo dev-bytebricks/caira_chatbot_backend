@@ -9,6 +9,8 @@ from app.common.settings import get_settings
 from app.common import openai
 import os
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
 
 # Configure Pinecone
@@ -39,7 +41,7 @@ async def delete_file(username, file_name):
         )
         return {"filename": file_name, "status": "success"}
     except Exception as ex:
-        logging.error(f"Error occured while deleting file from Pinecone | File Name: {file_name} | Error: {ex}")
+        logger.error(f"Error occured while deleting file from Pinecone | File Name: {file_name} | Error: {ex}")
         return {"filename": file_name, "status": "failed", "error": str(ex)}
 
 # For knowledge base only
@@ -53,7 +55,7 @@ async def delete_file_knowledge_base(file_name):
         )
         return {"filename": file_name, "status": "success"}
     except Exception as ex:
-        logging.error(f"Error occured while deleting file from Pinecone | File Name: {file_name} | Error: {ex}")
+        logger.error(f"Error occured while deleting file from Pinecone | File Name: {file_name} | Error: {ex}")
         return {"filename": file_name, "status": "failed", "error": str(ex)}
 
 # For consumers only
@@ -64,7 +66,7 @@ async def upload_file(username, file_content_str, file_name):
         return {"filename": file_name, "status": "success"}
    
     except Exception as ex:
-        logging.error(f"Error occured while uploading file to Pinecone | File Name: {file_name} | Error: {ex}")
+        logger.error(f"Error occured while uploading file to Pinecone | File Name: {file_name} | Error: {ex}")
         return {"filename": file_name, "status": "failed", "error": str(ex)}
 
 # For knowledge base only
@@ -75,7 +77,7 @@ async def upload_file_knowledge_base(file_content_str, file_name):
         return {"filename": file_name, "status": "success"}
    
     except Exception as ex:
-        logging.error(f"Error occured while uploading file to Pinecone | File Name: {file_name} | Error: {ex}")
+        logger.error(f"Error occured while uploading file to Pinecone | File Name: {file_name} | Error: {ex}")
         return {"filename": file_name, "status": "failed", "error": str(ex)}
 
 def chunk_documents_by_tpm(documents):

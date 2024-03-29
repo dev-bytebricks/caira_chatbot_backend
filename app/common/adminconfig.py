@@ -2,6 +2,8 @@ import logging
 from app.common.database import SessionLocal
 from app.models.user import AdminConfig
 
+logger = logging.getLogger(__name__)
+
 OPENAI_MODEL_NAME = None
 OPENAI_MODEL_TEMPERATURE = None
 LLM_PROMPT = None
@@ -33,9 +35,9 @@ def update_config():
             DISCLAIMERS = admin_config.disclaimers
             GDRIVE_ENABLED = admin_config.gdrive_enabled
             LOGO_LINK = admin_config.logo_link
-            logging.info(f"Admin config updated")
+            logger.info(f"Admin config updated")
         else:
-            logging.warn(f"No admin config in database | Inserting in database and using default admin config")
+            logger.warn(f"No admin config in database | Inserting in database and using default admin config")
             admin_config = AdminConfig()
             OPENAI_MODEL_NAME = admin_config.llm_model_name = "gpt-4-turbo-preview"
             OPENAI_MODEL_TEMPERATURE = admin_config.llm_temperature = 0.4
@@ -49,7 +51,7 @@ def update_config():
             session.commit()
 
     except Exception as ex:
-        logging.error(f"Exception occured while reading admin config from database | Using default admin config | Error: {ex}")
+        logger.error(f"Exception occured while reading admin config from database | Using default admin config | Error: {ex}")
         OPENAI_MODEL_NAME = "gpt-4-turbo-preview"
         OPENAI_MODEL_TEMPERATURE = 0.4
         LLM_PROMPT = ""

@@ -9,6 +9,8 @@ from jose import JWTError, jwt
 from app.models.user import User, UserToken, Role
 from sqlalchemy.orm import Session, joinedload
 
+logger = logging.getLogger(__name__)
+
 SPECIAL_CHARACTERS = ['!', '@', '#', '$', '%', '=', ':', '?', '.', '/', '|', '~', '>']
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
@@ -141,7 +143,7 @@ async def get_user_from_db(email: str, session: Session):
     try:
         user = session.query(User).filter(User.email == email).first()
     except Exception as user_exec:
-        logging.info(f"User Not Found, Email: {email} | Exception: {user_exec}")
+        logger.error(f"User Not Found, Email: {email} | Database Exception: {user_exec}")
         user = None
     return user
     

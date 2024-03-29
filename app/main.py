@@ -1,6 +1,11 @@
+import logging
 from fastapi import FastAPI
 from .common import settings
 from app.routes import auth, user, user_chat, user_document, admin_config, admin_knowledge_base
+
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S')
 
 def create_application():
     application = FastAPI()
