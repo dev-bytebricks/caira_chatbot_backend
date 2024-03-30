@@ -21,6 +21,7 @@ async def get_ai_response(username, db_session, user_msg, traceless, mode):
         for message in reversed(chat_history):
             if message.role == "AI":
                 latest_ai_response = message.content
+                break
         if latest_ai_response is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No AI response found in chat history")
         if mode == Mode.Simplify:
