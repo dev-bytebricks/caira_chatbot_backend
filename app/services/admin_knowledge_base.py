@@ -4,6 +4,7 @@ import logging
 from typing import List
 from PyPDF2 import PdfReader
 from fastapi import HTTPException, UploadFile, status
+from sqlalchemy import desc
 from app.common.settings import get_settings
 from app.models.user import KnowledgeBaseDocument
 from app.schemas.responses.admin_knowledge_base import FileInfo, UploadDocumentsResponse, DeleteDocumentsResponse, DocumentsListResponse
@@ -209,6 +210,5 @@ async def delete_documents(file_names, session: Session):
     return DeleteDocumentsResponse(deleted_files=deleted_files, failed_files=failed_files)
 
 async def get_documents_list(session: Session):
-    docs = session.query(KnowledgeBaseDocument).all()
+    docs = session.query(KnowledgeBaseDocument).order_by(desc(KnowledgeBaseDocument.uploaded_at)).all()
     return DocumentsListResponse(files=[FileInfo(filename=doc.document_name, content_type=doc.content_type) for doc in docs])
-

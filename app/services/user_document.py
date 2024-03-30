@@ -9,6 +9,7 @@ from app.models.user import UserDocument
 from app.schemas.responses.user_document import FileInfo, UploadDocumentsResponse, DeleteDocumentsResponse, DocumentsListResponse
 from app.common import vectorstore, gdrive, azurecloud
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc
 
 settings = get_settings()
 
@@ -210,6 +211,6 @@ async def delete_documents(file_names, username, session: Session):
 
 async def get_documents_list(username, session: Session):
     user_docs = session.query(UserDocument).options(joinedload(UserDocument.user))\
-        .filter(UserDocument.user_id == username).all()
+        .filter(UserDocument.user_id == username).order_by(desc(UserDocument.uploaded_at)).all()
     return DocumentsListResponse(files=[FileInfo(filename=user_doc.document_name, content_type=user_doc.content_type) for user_doc in user_docs])
 
