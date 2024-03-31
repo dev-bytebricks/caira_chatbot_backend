@@ -18,7 +18,7 @@ class OpenAIManager:
             openai_api_key=settings.OPENAI_API_KEY,
             temperature=AdminConfig.OPENAI_MODEL_TEMPERATURE
             )
-        logger.info(f"OpenAI chat client updated")
+        logger.info(f"OpenAI chat client initialised")
 
 # setup openAIChat at startup
 OpenAIManager.update_openai_chat_instance()

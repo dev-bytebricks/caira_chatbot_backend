@@ -28,7 +28,7 @@ class AdminConfig:
                 cls.DISCLAIMERS = admin_config.disclaimers
                 cls.GDRIVE_ENABLED = admin_config.gdrive_enabled
                 cls.LOGO_LINK = admin_config.logo_link
-                logger.info(f"Admin config updated")
+                logger.info(f"Admin config loaded from database")
             else:
                 logger.warn(f"No admin config in database | Inserting in database and using default admin config")
                 admin_config = AdminConfigModel()

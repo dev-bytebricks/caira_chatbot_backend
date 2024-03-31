@@ -1,11 +1,9 @@
-import logging
 from fastapi import FastAPI
-from .common import settings
-from app.routes import auth, user, user_chat, user_document, admin_config, admin_knowledge_base
+from .common import logging_config
 
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(name)s - %(funcName)s - %(message)s',
-                    datefmt='%Y-%m-%d %H:%M:%S')
+logging_config.setup_logging()
+
+from app.routes import auth, user, user_chat, user_document, admin_config, admin_knowledge_base
 
 def create_application():
     application = FastAPI()
@@ -22,5 +20,4 @@ app = create_application()
 
 @app.get("/")
 async def root():
-    mysettings = settings.get_settings()
     return {"message": "Caira V2 is live."}
