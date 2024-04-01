@@ -1,6 +1,9 @@
+import logging
 from fastapi_mail import FastMail, MessageSchema, MessageType, ConnectionConfig
 from fastapi.background import BackgroundTasks
 from app.common.settings import get_settings
+
+logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
@@ -28,5 +31,6 @@ async def send_email(recipients: list, subject: str, context: dict, template_nam
         template_body=context,
         subtype=MessageType.html
     )
-
-    background_tasks.add_task(fm.send_message, message, template_name=template_name)
+    await fm.send_message(message, template_name)
+    # background_tasks.add_task(fm.send_message, message, template_name=template_name)
+    logger.info(f"Email sent | message: {message} | template name: {template_name}")
