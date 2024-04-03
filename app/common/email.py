@@ -31,6 +31,4 @@ async def send_email(recipients: list, subject: str, context: dict, template_nam
         template_body=context,
         subtype=MessageType.html
     )
-    await fm.send_message(message, template_name)
-    # background_tasks.add_task(fm.send_message, message, template_name=template_name)
-    logger.info(f"Email sent | message: {message} | template name: {template_name}")
+    background_tasks.add_task(fm.send_message, message, template_name=template_name)

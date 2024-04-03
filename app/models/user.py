@@ -1,6 +1,6 @@
 from datetime import datetime
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String, func, ForeignKey, Enum
+from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String, func, ForeignKey, Enum, Text
 from app.common.database import Base
 from sqlalchemy.orm import mapped_column, relationship
 
@@ -51,7 +51,7 @@ class AdminConfig(Base):
     id = Column(Integer, primary_key=True)
     llm_model_name = Column(String(250), nullable=False, index=True, default=None)
     llm_temperature = Column(Numeric(2,2), nullable=False, default=None)
-    llm_prompt = Column(String(250), nullable=False, default=None)
+    llm_prompt = Column(Text, nullable=False, default=None)
     llm_role = Column(String(100), nullable=False, default=None)
     greeting_message = Column(String(250), nullable=False, default=None)
     disclaimers = Column(String(500), nullable=False, default=None)
