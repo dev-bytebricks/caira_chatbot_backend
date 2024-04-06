@@ -40,8 +40,16 @@ docker-compose run fastapi-service /bin/sh -c "alembic downgrade -1"
 - Mailpit [http://localhost:8025](http://localhost:8025)
 # fastapi-sqlalchemy-alembic
 
+# Pull docker images
+- az login
+- az acr login --name gdrivechatbot
+- docker-compose pull
 
-# Build and push docker image for Azure Contaier Registry
+# Start/Stop locally
+- docker-compose up -d
+- docker-compose down
+
+# Build and push docker image for Azure Contaier Registry (NEVER USE THIS)
 - az login
 - az acr login --name gdrivechatbot
 - docker build -t gdrivechatbot.azurecr.io/fastapi:latest -f Dockerfile.cloud .
