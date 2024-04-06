@@ -10,9 +10,9 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-    build:
-      context: ../zep_memory/zep
-      dockerfile: Dockerfile.postgres
+    # build:
+    #   context: ../zep_memory/zep
+    #   dockerfile: Dockerfile.postgres
     networks:
       - zep-network
     volumes:
@@ -60,9 +60,9 @@ services:
       - ZEP_EXTRACTORS_MESSAGES_SUMMARIZER_EMBEDDINGS_DIMENSIONS=1536
     env_file:
       - ../zep_memory/zep/.env # Store your OpenAI API key here as ZEP_OPENAI_API_KEY
-    build:
-      context: ../zep_memory/zep
-      dockerfile: Dockerfile
+    # build:
+    #   context: ../zep_memory/zep
+    #   dockerfile: Dockerfile
     healthcheck:
       test: timeout 10s bash -c ':> /dev/tcp/127.0.0.1/8000' || exit 1
       interval: 5s
