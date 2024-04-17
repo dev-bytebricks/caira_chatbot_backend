@@ -51,6 +51,7 @@ class AdminConfig(Base):
     id = Column(Integer, primary_key=True)
     llm_model_name = Column(String(250), nullable=False, index=True, default=None)
     llm_temperature = Column(Numeric(2,2), nullable=False, default=None)
+    llm_streaming = Column(Boolean, nullable=False, default=True)
     llm_prompt = Column(Text, nullable=False, default=None)
     llm_role = Column(String(100), nullable=False, default=None)
     greeting_message = Column(String(250), nullable=False, default=None)

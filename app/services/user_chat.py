@@ -1,27 +1,39 @@
+import asyncio
 import re
 import uuid
 from fastapi import HTTPException, status
 from app.schemas.requests.user_chat import Mode
 from app.schemas.responses.user_chat import AiResponse
 from app.common import getzep, langchain
+import pprint 
+from time import sleep 
+
 
 async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
-    qa_chain = langchain.get_qa_chain(db_session, username)
+    qa_chain =langchain.get_qa_chain(db_session, username)
+    ai_msg=''
 
     if mode == Mode.NA:
-        qa_chain_response = qa_chain.invoke({"input": user_msg, "chat_history": getzep.convert_zep_messages_to_langchain(chat_history)})
-        ai_msg = qa_chain_response["output"]
+
+        async for chunk in qa_chain.astream_events({"input": user_msg, "chat_history": getzep.convert_zep_messages_to_langchain(chat_history)},version='v1'):
+            if chunk['event'] == 'on_chat_model_stream':
+                content = chunk['data']['chunk'].content
+                ai_msg = ai_msg + content 
+                yield f"data: {content}\n\n"   
+        
+
         if not traceless:
             await _add_message_to_chat_history(username, "User", user_msg)
             await _add_message_to_chat_history(username, "AI", ai_msg)
-        return AiResponse(ai_response=ai_msg, traceless=traceless)
+
     else:
         latest_ai_response = None
         for message in reversed(chat_history):
             if message.role == "AI":
                 latest_ai_response = message.content
                 break
+        
         if latest_ai_response is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No AI response found in chat history")
         if mode == Mode.Simplify:
@@ -30,11 +42,16 @@ async def get_ai_response(username, db_session, user_msg, traceless, mode):
             user_msg = f'''Please elaborate your response where you say: "{latest_ai_response}"'''
         else:
             user_msg = f'''Please give me a legal precedent on your following response: "{latest_ai_response}"'''
-        qa_chain_response = qa_chain.invoke({"input": user_msg, "chat_history": getzep.convert_zep_messages_to_langchain(chat_history)})
-        ai_msg = qa_chain_response["output"]
+        
+        
+        async for chunk in qa_chain.astream_events({"input": user_msg, "chat_history": getzep.convert_zep_messages_to_langchain(chat_history)},version='v1'):
+            if chunk['event'] == 'on_chat_model_stream':
+                content = chunk['data']['chunk'].content
+                ai_msg = ai_msg + content 
+                yield f"data: {content}\n\n"   
+
         if not traceless:
             await _add_message_to_chat_history(username, "AI", ai_msg)
-        return AiResponse(ai_response=ai_msg, traceless=traceless)
 
 async def _get_zep_session_id_by_username(username):
     user_all_sessions = getzep.get_all_sessions_of_user(username)
@@ -72,3 +89,28 @@ async def clear_chat_history(username):
         getzep.add_session(user_id=username, sessionid=uuid.uuid4().hex)
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error occured while clearing chat history: {ex}")
+    
+def stream_response(chain_response,output):
+    for chunk in chain_response:
+        print(f'chunk: {chunk}')
+        for key in chunk:
+            print(f'key: {key}')
+            if key not in output:
+                output[key] = chunk[key]
+            else:
+                output[key] += chunk[key]
+            print(output[key])
+    return output
+
+async def stream_response(chain_response,output):
+    for chunk in chain_response:
+        print(f'chunk: {chunk}')
+        for key in chunk:
+            print(f'key: {key}')
+            if key not in output:
+                output[key] = chunk[key]
+            else:
+                output[key] += chunk[key]
+            print(output[key])
+    return output
+
