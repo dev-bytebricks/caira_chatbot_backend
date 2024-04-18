@@ -6,6 +6,7 @@ class AdminConfigResponse(BaseModel):
     llm_temperature: float
     llm_prompt: str
     llm_role: str
+    llm_streaming: str
     greeting_message: str
     disclaimers: str
     gdrive_enabled: bool
