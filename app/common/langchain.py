@@ -10,6 +10,7 @@ from langchain_core.output_parsers import StrOutputParser
 from operator import itemgetter
 from sqlalchemy.orm import Session
 
+
 settings = get_settings()
 
 def get_qa_chain(session: Session, username):
@@ -19,7 +20,7 @@ def get_qa_chain(session: Session, username):
     return construct_kb_chain()
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
-def construct_kb_consumer_chain(username, consumer_doc_names):
+async def construct_kb_consumer_chain(username, consumer_doc_names):
     # get consumer retriever
     vectorstore = get_vector_store_instance(settings.PINECONE_CONSUMER_INDEX, None)
 
@@ -36,6 +37,7 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
         consumer_retriever,
         "user_uploaded_file",
         "use this tool to access user's information regarding their particular scenario or circumstances"
+
     )
 
     # get knowledge base retriever
@@ -64,8 +66,9 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
     agentExecutor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=True,
-        return_intermediate_steps=True
+        verbose=False,
+        #return_intermediate_steps=True
+        return_intermediate_steps=False
     )
 
     return agentExecutor
@@ -100,8 +103,8 @@ def construct_kb_chain():
     agentExecutor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=True,
-        return_intermediate_steps=True
+        verbose=False,
+        return_intermediate_steps=False,
     )
 
     return agentExecutor
