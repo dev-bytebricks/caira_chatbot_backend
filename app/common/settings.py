@@ -78,9 +78,6 @@ class Settings(BaseSettings):
     @property
     def GOOGLE_SERVICE_ACCOUNT_CREDS(self) -> str:
         return json.loads(self.GOOGLE_SERVICE_ACCOUNT_JSON)
-    
-    # File Uploading and Deleting Concurrency
-    SEMAPHORE_LIMIT: int
 
     # Pydantic Settings
     model_config = SettingsConfigDict(extra= "ignore", env_file= find_dotenv(".env"), case_sensitive=True)
