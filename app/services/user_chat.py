@@ -5,14 +5,15 @@ from fastapi import HTTPException, status
 from app.schemas.requests.user_chat import Mode
 from app.schemas.responses.user_chat import AiResponse
 from app.common import getzep, langchain
-import pprint 
-from time import sleep 
+from langsmith import Client
 
+client=Client()
 
 async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
     qa_chain =langchain.get_qa_chain(db_session, username)
     ai_msg=''
+
 
     if mode == Mode.NA:
 

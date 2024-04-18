@@ -11,6 +11,8 @@ from operator import itemgetter
 from sqlalchemy.orm import Session
 
 
+
+
 settings = get_settings()
 
 def get_qa_chain(session: Session, username):
@@ -61,7 +63,6 @@ async def construct_kb_consumer_chain(username, consumer_doc_names):
         agent=agent,
         tools=tools,
         verbose=False,
-        #return_intermediate_steps=True
         return_intermediate_steps=False
     )
 

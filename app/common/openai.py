@@ -2,7 +2,10 @@ import logging
 from app.common.settings import get_settings
 from app.common.adminconfig import AdminConfig
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.callbacks.tracers import LangChainTracer
+
+tracer=LangChainTracer(project_name='myproject')
+
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -18,7 +21,9 @@ class OpenAIManager:
             model=AdminConfig.OPENAI_MODEL_NAME, 
             openai_api_key=settings.OPENAI_API_KEY,
             temperature=AdminConfig.OPENAI_MODEL_TEMPERATURE,
-            streaming= AdminConfig.LLM_STREAMING
+            streaming= AdminConfig.LLM_STREAMING,
+            callbacks=[tracer],
+            tags=['Core LLM']
             )
         logger.info(f"OpenAI chat client initialised")
 
