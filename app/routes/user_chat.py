@@ -6,6 +6,7 @@ from app.common.security import oauth2_scheme, validate_access_token
 from app.schemas.responses.user_chat import AiResponse, ChatHistoryResponse, ChatMessage
 from app.schemas.requests.user_chat import AiRequest
 from app.services import user_chat
+from fastapi.responses import StreamingResponse
 
 user_chat_router_protected = APIRouter(
     prefix="/users/chat",
@@ -19,7 +20,10 @@ user_chat_router_protected = APIRouter(
 # The modes will be stored in form of enums (0 - N/A, 1 - Simplify, 2 - Elaborate, 3 - Get Legal Precedent)
 @user_chat_router_protected.post("/send-msg", status_code=status.HTTP_200_OK, response_model=AiResponse)
 async def get_ai_response(data: AiRequest, username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
-    return await user_chat.get_ai_response(username, session, data.user_msg, data.traceless, data.mode)
+    #return await user_chat.get_ai_response(username, session, data.user_msg, data.traceless, data.mode)
+    response = StreamingResponse(user_chat.get_ai_response(username, session, data.user_msg, data.traceless, data.mode), media_type="text/event-stream")
+    response.headers['traceless'] = str(data.traceless).lower()
+    return response 
 
 # Get chat history
 # users/chat/get-msgs -> Get Request, Response: list of msgs
