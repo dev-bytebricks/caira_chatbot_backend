@@ -1,5 +1,4 @@
-from typing import List
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.common.database import get_session
@@ -14,17 +13,13 @@ user_document_router_protected = APIRouter(
     dependencies=[Depends(oauth2_scheme), Depends(validate_access_token)]
 )
 
-@user_document_router_protected.post("/upload")
-async def upload_documents(files: List[UploadFile] = File(...), username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
-    response = await user_document.upload_documents(files, username, session)
-    status_code = status.HTTP_200_OK
-    if len(response.failed_files) > 0:
-        status_code = status.HTTP_417_EXPECTATION_FAILED
-    return JSONResponse(status_code=status_code, content=response.model_dump(exclude_none=True))
+@user_document_router_protected.get("/get-azure-storage-token", status_code=status.HTTP_200_OK)
+async def get_azure_storage_token():
+    return await user_document.get_azure_storage_token()
 
 @user_document_router_protected.post("/upload-gdrive")
 async def upload_documents_gdrivelink(gdrivelink: str = Query(..., title="Google Drive Link"), username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
-    response = await user_document.upload_documents_gdrivelink(gdrivelink, username, session)
+    response = await user_document.enqueue_gdrive_upload(gdrivelink, username, session)
     status_code = status.HTTP_200_OK
     if len(response.failed_files) > 0:
         status_code = status.HTTP_417_EXPECTATION_FAILED
@@ -35,8 +30,8 @@ async def download_document(file_name: str, username: str = Depends(validate_acc
     return await user_document.get_download_link(username, file_name, session)
 
 @user_document_router_protected.post("/delete-multiple")
-async def delete_documents(data: DeleteDocumentsRequest, username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
-    response = await user_document.delete_documents(data.file_names, username, session)
+async def enqueue_file_deletions(data: DeleteDocumentsRequest, username: str = Depends(validate_access_token)):
+    response = await user_document.enqueue_file_deletions(username, data.file_names)
     status_code = status.HTTP_200_OK
     if len(response.failed_files) > 0:
         status_code = status.HTTP_417_EXPECTATION_FAILED

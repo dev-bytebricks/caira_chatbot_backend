@@ -1,55 +1,27 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 import logging
+from typing import List
 from app.common.settings import get_settings
-from azure.storage.blob.aio import ContainerClient as ContainerClientAsync
-from azure.storage.blob import generate_blob_sas, BlobSasPermissions, ContentSettings, ContainerClient
+from azure.storage.blob import generate_blob_sas, generate_container_sas, BlobSasPermissions, ContainerSasPermissions, ContainerClient
+from azure.storage.queue.aio import QueueServiceClient, QueueClient
+from azure.storage.queue import TextBase64EncodePolicy, TextBase64DecodePolicy
 
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
 
-consumer_container_client_async: ContainerClientAsync = ContainerClientAsync.from_connection_string(
-    conn_str=settings.AZURE_STORAGE_CONNECTION_STRING, 
-    container_name=settings.AZURE_STORAGE_CONSUMER_CONTAINER_NAME)
-
 consumer_container_client: ContainerClient = ContainerClient.from_connection_string(
     conn_str=settings.AZURE_STORAGE_CONNECTION_STRING, 
     container_name=settings.AZURE_STORAGE_CONSUMER_CONTAINER_NAME)
-
-kb_container_client_async: ContainerClientAsync = ContainerClientAsync.from_connection_string(
-    conn_str=settings.AZURE_STORAGE_CONNECTION_STRING, 
-    container_name=settings.AZURE_STORAGE_KNOWLEDGE_BASE_CONTAINER_NAME)
 
 kb_container_client: ContainerClient = ContainerClient.from_connection_string(
     conn_str=settings.AZURE_STORAGE_CONNECTION_STRING, 
     container_name=settings.AZURE_STORAGE_KNOWLEDGE_BASE_CONTAINER_NAME)
 
-
-async def upload_file_knowledge_base(file_content, file_name, content_type):
-    blob_name = file_name
-    try:
-        await kb_container_client_async.upload_blob(name=blob_name, 
-                                           data=file_content, 
-                                           overwrite=True, 
-                                           content_settings=ContentSettings(content_type=content_type),
-                                           metadata={'uploaded_at': str(datetime.now(timezone.utc))})
-        return {"filename": file_name, "status": "success"}
-    except Exception as ex:
-        logger.error(f"Error occured while uploading file to Azure Storage | Blob: {blob_name} | Error: {ex}")
-        return {"filename": file_name, "status": "failed", "error": str(ex)}
-
-async def upload_file(username, file_content, file_name, content_type):
-    blob_name = f"{username}/{file_name}"
-    try:
-        await consumer_container_client_async.upload_blob(name=blob_name, 
-                                           data=file_content, 
-                                           overwrite=True, 
-                                           content_settings=ContentSettings(content_type=content_type),
-                                           metadata={'uploaded_at': str(datetime.now(timezone.utc)), 'user_id': username})
-        return {"filename": file_name, "status": "success"}
-    except Exception as ex:
-        logger.error(f"Error occured while uploading file to Azure Storage | Blob: {blob_name} | Error: {ex}")
-        return {"filename": file_name, "status": "failed", "error": str(ex)}
+queue_service_client: QueueServiceClient = QueueServiceClient.from_connection_string(
+    conn_str=settings.AZURE_STORAGE_CONNECTION_STRING
+)
 
 def blob_exists(blob_name):
     blob = consumer_container_client.get_blob_client(blob=blob_name)
@@ -92,33 +64,57 @@ async def get_download_link(username, file_name):
         permission=BlobSasPermissions(read=True),
         expiry=datetime.now(timezone.utc) + timedelta(hours=1) # Token valid for 1 hour
     )
-    
+
     return f"{blob_client.url}?{sas_token}"
 
-async def delete_file_knowledge_base(file_name):
-    blob_name=file_name
-    try:
-        if blob_exists_knowledge_base(blob_name):
-            blob_client = kb_container_client.get_blob_client(blob=blob_name)
-            blob_client.delete_blob()
-            return {"filename": file_name, "status": "success"}
-        else:
-            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: Blob not found in container. Skipping deletion.")
-            return {"filename": file_name, "status": "failed", "error": f"Blob {blob_name} not found in container."}
-    except Exception as ex:
-            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: {ex}")
-            return {"filename": file_name, "status": "failed", "error": str(ex)}
+def get_container_sas():
+    sas_token = generate_container_sas(
+        account_name=settings.AZURE_STORAGE_ACCOUNT_NAME,
+        account_key=settings.AZURE_STORAGE_ACCOUNT_KEY,
+        container_name=settings.AZURE_STORAGE_CONSUMER_CONTAINER_NAME,
+        permission=ContainerSasPermissions(write=True, list=True),
+        expiry=datetime.now(timezone.utc) + timedelta(hours=1)  # Token valid for 1 hour
+    )
+    return sas_token
 
-async def delete_file(username, file_name):
-    blob_name=f"{username}/{file_name}"
+def get_container_sas_knowledge_base():
+    sas_token = generate_container_sas(
+        account_name=settings.AZURE_STORAGE_ACCOUNT_NAME,
+        account_key=settings.AZURE_STORAGE_ACCOUNT_KEY,
+        container_name=settings.AZURE_STORAGE_KNOWLEDGE_BASE_CONTAINER_NAME,
+        permission=ContainerSasPermissions(write=True, list=True),
+        expiry=datetime.now(timezone.utc) + timedelta(hours=1)  # Token valid for 1 hour
+    )
+    return sas_token
+
+async def send_messages_to_queue(queue_name: str, messages: List[str]):
+    queue_client: QueueClient = queue_service_client.get_queue_client(
+        queue_name,
+        message_encode_policy = TextBase64EncodePolicy(),
+        message_decode_policy = TextBase64DecodePolicy()
+        )
+    tasks = []
+
+    for message in messages:
+        # Create a task for each message, handling errors individually
+        task = _send_message_to_queue_safely(queue_client, message)
+        tasks.append(task)
+
+    # Wait for all tasks to complete
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # Analyze results
+    failed_messages = []
+
+    for message, result in zip(messages, results):
+        if result is not None:
+            failed_messages.append((message, str(result)))
+    
+    return failed_messages
+
+async def _send_message_to_queue_safely(queue_client: QueueClient, message: str):
     try:
-        if blob_exists(blob_name):
-            blob_client = consumer_container_client.get_blob_client(blob=blob_name)
-            blob_client.delete_blob()
-            return {"filename": file_name, "status": "success"}
-        else:
-            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: Blob not found in container. Skipping deletion.")
-            return {"filename": file_name, "status": "failed", "error": f"Blob {blob_name} not found in container."}
+        await queue_client.send_message(message)
+        return None
     except Exception as ex:
-            logger.error(f"Error occured while deleting file from Azure Storage | Blob: {blob_name} | Error: {ex}")
-            return {"filename": file_name, "status": "failed", "error": str(ex)}
+        return ex

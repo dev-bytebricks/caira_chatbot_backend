@@ -21,11 +21,17 @@ def get_qa_chain(session: Session, username):
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
 def construct_kb_consumer_chain(username, consumer_doc_names):
     # get consumer retriever
-    vectorstore = get_vector_store_instance(settings.PINECONE_CONSUMER_INDEX, username)
+    vectorstore = get_vector_store_instance(settings.PINECONE_CONSUMER_INDEX, None)
 
     # use "in" conditon in filter of vectorstore to compare with document ids stored in db
     consumer_retriever = vectorstore.as_retriever(search_type = "mmr", 
-                                                  search_kwargs={'k': 3, 'fetch_k': 50, 'filter': {"document_id": {"$in":consumer_doc_names}}})
+                                                  search_kwargs={
+                                                      'k': 3, 
+                                                      'fetch_k': 50, 
+                                                      'filter': {"file_name": {
+                                                           "$in":[f"{username}:{doc_name}" for doc_name in consumer_doc_names]
+                                                           }}
+                                                       })
     consumer_retriever_tool = create_retriever_tool(
         consumer_retriever,
         "user_uploaded_file",

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import enum
 from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String, func, ForeignKey, Enum, Text
 from app.common.database import Base
@@ -17,7 +17,7 @@ class User(Base):
     is_active = Column(Boolean, default=False)
     role = Column(Enum(Role), nullable=False)
     verified_at = Column(DateTime, nullable=True, default=None)
-    updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now)
+    updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now(timezone.utc))
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     
     tokens = relationship("UserToken", back_populates="user")
@@ -40,9 +40,11 @@ class UserDocument(Base):
     __tablename__ = "user_documents"
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = mapped_column(ForeignKey('users.email'))
-    document_name = Column(String(250), nullable=True, index=True, default=None)
+    document_name = Column(String(length=250, collation="utf8_bin"), nullable=True, index=True, default=None)
     content_type = Column(String(250), nullable=True, index=True, default=None)
-    uploaded_at = Column(DateTime, nullable=False, server_default=func.now())
+    status = Column(String(100), nullable=True, index=True, default=None)
+    updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
     
     user = relationship("User", back_populates="documents")
 
@@ -62,6 +64,8 @@ class AdminConfig(Base):
 class KnowledgeBaseDocument(Base):
     __tablename__ = "knowledgebase_documents"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    document_name = Column(String(250), nullable=True, index=True, default=None)
+    document_name = Column(String(length=250, collation="utf8_bin"), nullable=True, index=True, default=None)
     content_type = Column(String(250), nullable=True, index=True, default=None)
-    uploaded_at = Column(DateTime, nullable=False, server_default=func.now())
+    status = Column(String(100), nullable=True, index=True, default=None)
+    updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now(timezone.utc))
+    created_at = Column(DateTime, nullable=False, server_default=func.now())
