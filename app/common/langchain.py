@@ -37,7 +37,6 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
         consumer_retriever,
         "user_uploaded_file",
         "use this tool to access user's information regarding their particular scenario or circumstances"
-
     )
 
     # get knowledge base retriever

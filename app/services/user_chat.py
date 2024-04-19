@@ -13,7 +13,8 @@ async def get_ai_response(username, db_session, user_msg, traceless, mode):
     if mode == Mode.NA:
         async for content in _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history):
             ai_msg += content
-            yield f"data: {content}\n\n"
+            yield content
+            # yield f"data: {content}\n\n"
 
         if not traceless:
             await _add_message_to_chat_history(username, "User", user_msg)
