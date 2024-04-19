@@ -66,7 +66,7 @@ async def get_suggested_questions(username):
         return question
     
     chat_history = await get_chat_history(username)
-    chain = langchain.get_suggested_questions_chain(username)
+    chain = langchain.get_suggested_questions_chain()
     response = chain.invoke({"chat_history": getzep.convert_zep_messages_to_langchain(chat_history[-4:])})
     suggested_questions = response.split('\n')
     suggested_questions = [strip_suggested_questions(suggested_question) for suggested_question in suggested_questions]
