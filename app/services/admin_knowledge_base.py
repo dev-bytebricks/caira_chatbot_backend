@@ -64,7 +64,22 @@ async def get_download_link(file_name, session: Session):
 async def get_documents_list(session: Session):
     docs = session.query(KnowledgeBaseDocument)\
         .filter(KnowledgeBaseDocument.status != "del_failed").order_by(desc(KnowledgeBaseDocument.created_at)).all()
-    return DocumentsListResponse(files=[FileInfo(filename=doc.document_name, content_type=doc.content_type, status=doc.status) for doc in docs])
+    
+    # Clean up upload_failed docs after sending them
+    session.query(KnowledgeBaseDocument).filter(KnowledgeBaseDocument.status == "upload_failed"
+                                                ).delete(synchronize_session='fetch')
+    session.commit()
+    
+    files = []
+    failed_files = []
+
+    for doc in docs:
+        if doc.status == "upload_failed":
+            failed_files.append(FileInfo(filename=doc.document_name, content_type=doc.content_type, status="Failed to process file"))
+        else:
+            files.append(FileInfo(filename=doc.document_name, content_type=doc.content_type, status=doc.status))
+
+    return DocumentsListResponse(files=files, failed_files=failed_files)
 
 async def enqueue_file_deletions(file_names: List[str]):
     messages = []

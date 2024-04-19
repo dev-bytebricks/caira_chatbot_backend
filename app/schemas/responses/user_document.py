@@ -19,3 +19,4 @@ class DeleteDocumentsResponse(BaseModel):
 
 class DocumentsListResponse(BaseModel):
     files: List[FileInfo]
+    failed_files: List[FileInfo]

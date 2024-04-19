@@ -71,7 +71,25 @@ async def get_documents_list(username, session: Session):
             UserDocument.user_id == username,
             UserDocument.status != "del_failed"
             ).order_by(desc(UserDocument.created_at)).all()
-    return DocumentsListResponse(files=[FileInfo(filename=user_doc.document_name, content_type=user_doc.content_type, status=user_doc.status) for user_doc in user_docs])
+    
+    # Clean up upload_failed docs after sending them
+    session.query(UserDocument).options(joinedload(UserDocument.user))\
+        .filter(
+            UserDocument.user_id == username, 
+            UserDocument.status == "upload_failed"
+            ).delete(synchronize_session='fetch')
+    session.commit()
+    
+    files = []
+    failed_files = []
+
+    for user_doc in user_docs:
+        if user_doc.status == "upload_failed":
+            failed_files.append(FileInfo(filename=user_doc.document_name, content_type=user_doc.content_type, status="Failed to process file"))
+        else:
+            files.append(FileInfo(filename=user_doc.document_name, content_type=user_doc.content_type, status=user_doc.status))
+
+    return DocumentsListResponse(files=files, failed_files=failed_files)
 
 async def enqueue_file_deletions(username, file_names: List[str]):
     messages = []
