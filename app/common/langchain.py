@@ -16,11 +16,11 @@ settings = get_settings()
 async def get_qa_chain(session: Session, username):
     user_docs = session.query(UserDocument).filter_by(user_id=username).all()
     if len(user_docs) > 0:
-        return await construct_kb_consumer_chain(username, [f"{username}/{user_doc.document_name}" for user_doc in user_docs])
+        return construct_kb_consumer_chain(username, [f"{username}/{user_doc.document_name}" for user_doc in user_docs])
     return construct_kb_chain()
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
-async def construct_kb_consumer_chain(username, consumer_doc_names):
+def construct_kb_consumer_chain(username, consumer_doc_names):
     # get consumer retriever
     vectorstore = get_vector_store_instance(settings.PINECONE_CONSUMER_INDEX, None)
 

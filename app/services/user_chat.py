@@ -6,7 +6,7 @@ from app.common import getzep, langchain
 
 async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
-    qa_chain = await langchain.get_qa_chain(db_session, username)
+    qa_chain = langchain.get_qa_chain(db_session, username)
     ai_msg = ''
 
     if mode == Mode.NA:
