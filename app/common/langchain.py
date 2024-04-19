@@ -17,7 +17,7 @@ def get_qa_chain(session: Session, username):
     user_docs = session.query(UserDocument).filter_by(user_id=username).all()
     if len(user_docs) > 0:
         return construct_kb_consumer_chain(username, [f"{username}/{user_doc.document_name}" for user_doc in user_docs])
-    return construct_kb_chain()
+    return construct_kb_chain(username)
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
 def construct_kb_consumer_chain(username, consumer_doc_names):
@@ -66,14 +66,13 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
         agent=agent,
         tools=tools,
         verbose=False,
-        #return_intermediate_steps=True
         return_intermediate_steps=False
-    )
+    ).with_config({"tags": ["execute-kb+docs-retriever-agent"], "metadata": {"user-email": username}})
 
     return agentExecutor
 
 # SETUP KNOWLEDGE BASE CHAIN
-def construct_kb_chain():
+def construct_kb_chain(username):
     # get consumer retriever
     vectorstore = get_vector_store_instance(settings.PINECONE_KNOWLEDGE_BASE_INDEX, None)
     
@@ -104,11 +103,11 @@ def construct_kb_chain():
         tools=tools,
         verbose=False,
         return_intermediate_steps=False,
-    )
+    ).with_config({"tags": ["execute-kb-retriever-agent"], "metadata": {"user-email": username}})
 
     return agentExecutor
 
-def get_suggested_questions_chain():
+def get_suggested_questions_chain(username):
     template = """
     Based on the conversation between a user and legal writer, generate 5 PRECISE 5 WORDS follow-up questions.
     NOTE: If no conversation is provided then generate 5 PRECISE 5 WORDS questions a user can ask from a legal writer.
@@ -126,6 +125,6 @@ def get_suggested_questions_chain():
         | prompt
         | OpenAIManager.OPENAI_CHAT
         | StrOutputParser()
-    )
+    ).with_config({"tags": ["execute-suggested-question-chain"], "metadata": {"user-email": username}})
 
     return chain
