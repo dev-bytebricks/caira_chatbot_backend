@@ -13,10 +13,10 @@ from sqlalchemy.orm import Session
 
 settings = get_settings()
 
-def get_qa_chain(session: Session, username):
+async def get_qa_chain(session: Session, username):
     user_docs = session.query(UserDocument).filter_by(user_id=username).all()
     if len(user_docs) > 0:
-        return construct_kb_consumer_chain(username, [f"{username}/{user_doc.document_name}" for user_doc in user_docs])
+        return await construct_kb_consumer_chain(username, [f"{username}/{user_doc.document_name}" for user_doc in user_docs])
     return construct_kb_chain()
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
