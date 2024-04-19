@@ -8,11 +8,13 @@ from langchain.agents import AgentExecutor
 async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
     qa_chain = langchain.get_qa_chain(db_session, username)
-    ai_msg = ''
+    ai_msg = ""
 
     if mode == Mode.NA:
-        await _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history)
-        
+        async for content in _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history):
+            ai_msg += content
+            yield f"data: {content}\n\n"
+
         if not traceless:
             await _add_message_to_chat_history(username, "User", user_msg)
             await _add_message_to_chat_history(username, "AI", ai_msg)
@@ -33,7 +35,9 @@ async def get_ai_response(username, db_session, user_msg, traceless, mode):
         else:
             user_msg = f'''Please give me a legal precedent on your following response: "{latest_ai_response}"'''
         
-        await _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history) 
+        async for content in _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history):
+            ai_msg += content
+            yield f"data: {content}\n\n" 
 
         if not traceless:
             await _add_message_to_chat_history(username, "AI", ai_msg)
@@ -76,13 +80,8 @@ async def clear_chat_history(username):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error occured while clearing chat history: {ex}")
 
 async def _stream_response(chain: AgentExecutor, user_msg, zep_chat_history):
-    async for chunk in chain.astream_events(
-        {
-            "input": user_msg,
-            "chat_history": getzep.convert_zep_messages_to_langchain(zep_chat_history)
-         },version='v1'):
+    converted_history = getzep.convert_zep_messages_to_langchain(zep_chat_history)
+    async for chunk in chain.astream_events({"input": user_msg, "chat_history": converted_history}, version='v1'):
         if chunk['event'] == 'on_chat_model_stream':
             content = chunk['data']['chunk'].content
-            ai_msg = ai_msg + content
-            yield f"data: {content}\n\n"
-
+            yield content
