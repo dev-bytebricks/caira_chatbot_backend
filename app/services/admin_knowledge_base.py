@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import desc
 from app.common.settings import get_settings
 from app.models.user import KnowledgeBaseDocument
-from app.schemas.responses.admin_knowledge_base import FileInfo, GdriveUploadResponse, DeleteDocumentsResponse, DocumentsListResponse
+from app.schemas.responses.admin_knowledge_base import FileInfo, GdriveUploadResponse, DeleteDocumentsResponse, DocumentsListResponse, ValidateDocumentsResponse, FileExists
 from app.common import gdrive, azurecloud
 from sqlalchemy.orm import Session
 
@@ -28,7 +28,14 @@ async def enqueue_gdrive_upload(gdrivelink, session: Session):
         file_type = file_info["mimeType"]
         if file_type == "application/vnd.google-apps.document":
             file_name += ".pdf"
-        if _is_document_in_db(file_name, session):
+        
+        # check if file exists in database
+        doc = session.query(KnowledgeBaseDocument)\
+            .filter(KnowledgeBaseDocument.document_name == file_name,
+                    KnowledgeBaseDocument.status != "del_failed").first()
+
+        if doc:
+            # add logging for multiple statuses here (for completed status show same file exists but for other statuses show file upload is in progress)
             failed_files.append(FileInfo(filename=file_name, error="File with same name already exists"))
         else:
             files_to_enqueue.append(file_info)
@@ -41,22 +48,28 @@ async def enqueue_gdrive_upload(gdrivelink, session: Session):
         message_body = json.dumps({"files_info": batch})
         messages.append(message_body)
     failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_KNOWLEDGEBASE_GDRIVE_UPLOAD_QUEUE_NAME, messages)
-    
-    if len(failed_messages) == 0:
-        return GdriveUploadResponse(queued_files=[FileInfo(filename=file_to_enqueue["name"]) for file_to_enqueue in files_to_enqueue], 
-                                    failed_files=[])
 
     for msg, error in failed_messages:
         failed_files_info = json.loads(msg)["files_info"]
         files_to_enqueue = [item for item in files_to_enqueue if item not in failed_files_info]
         failed_files.extend([FileInfo(filename=failed_file_info["name"], error=error) for failed_file_info in failed_files_info])
+    
+    # update status of files in db which are queued for transfer
+    for enqueued_file in files_to_enqueue:
+        pass
+    
     return GdriveUploadResponse(queued_files=[FileInfo(filename=file_to_enqueue["name"]) for file_to_enqueue in files_to_enqueue], 
                                 failed_files=failed_files)
 
 async def get_download_link(file_name, session: Session):
     file_not_found_exec = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
-    if not _is_document_in_db(file_name, session):
+    # check if file exists in database with completed status
+    doc = session.query(KnowledgeBaseDocument)\
+        .filter(KnowledgeBaseDocument.document_name == file_name,
+                KnowledgeBaseDocument.status == "Completed").first()
+
+    if not doc:
         raise file_not_found_exec
 
     download_link = await azurecloud.get_download_link_knowledge_base(file_name)
@@ -105,9 +118,12 @@ def _chunk_data(list, size):
     for i in range(0, len(list), size):
         yield list[i:i + size]
 
-def _is_document_in_db(filename, session: Session):
-    doc = session.query(KnowledgeBaseDocument)\
-        .filter(KnowledgeBaseDocument.document_name == filename).first()
-    if doc:
-        return True
-    return False
+async def validate_filenames(file_names: List[str], session: Session):
+    existing_files = session.query(KnowledgeBaseDocument.document_name)\
+        .filter(KnowledgeBaseDocument.document_name.in_(file_names), 
+                KnowledgeBaseDocument.status != "del_failed")\
+        .all()
+    
+    existing_file_set = {doc.document_name for doc in existing_files}
+
+    return ValidateDocumentsResponse(files=[FileExists(filename=file_name, exists=file_name in existing_file_set) for file_name in file_names])

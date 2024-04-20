@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.common.database import get_session
 from app.common.security import is_admin, oauth2_scheme, validate_access_token
-from app.schemas.requests.user_document import DeleteDocumentsRequest
+from app.schemas.requests.admin_knowledge_base import ValidateDocumentsRequest, DeleteDocumentsRequest
 from app.services import admin_knowledge_base
 
 admin_knowledge_base_router_protected = APIRouter(
@@ -42,3 +42,7 @@ async def get_documents_list(session: Session = Depends(get_session)):
     doc_list = await admin_knowledge_base.get_documents_list(session)
     return doc_list.model_dump(exclude_none=True)
 
+@admin_knowledge_base_router_protected.get("/validate-documents", status_code=status.HTTP_200_OK)
+async def get_documents_list(data: ValidateDocumentsRequest, session: Session = Depends(get_session)):
+    doc_list = await admin_knowledge_base.validate_filenames(data.file_names, session)
+    return doc_list.model_dump()

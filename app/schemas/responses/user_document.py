@@ -17,6 +17,13 @@ class GdriveUploadResponse(BaseModel):
 class DeleteDocumentsResponse(BaseModel):
     failed_files: List[FileInfo]
 
+class FileExists(BaseModel):
+    filename: str
+    exists: bool
+
+class ValidateDocumentsResponse(BaseModel):
+    files: List[FileExists]
+
 class DocumentsListResponse(BaseModel):
     files: List[FileInfo]
     failed_files: List[FileInfo]
