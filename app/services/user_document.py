@@ -129,7 +129,7 @@ async def validate_filenames(username, file_names: List[str], session: Session):
     if len(file_names) == 0:
         return ValidateDocumentsResponse(files=[])
 
-    existing_files = session.query(UserDocument.document_name)\
+    existing_files = session.query(UserDocument)\
         .options(joinedload(UserDocument.user))\
         .filter(UserDocument.user_id == username, 
                 UserDocument.document_name.in_(file_names), 

@@ -122,7 +122,7 @@ async def validate_filenames(file_names: List[str], session: Session):
     if len(file_names) == 0:
         return ValidateDocumentsResponse(files=[])
     
-    existing_files = session.query(KnowledgeBaseDocument.document_name)\
+    existing_files = session.query(KnowledgeBaseDocument)\
         .filter(KnowledgeBaseDocument.document_name.in_(file_names), 
                 KnowledgeBaseDocument.status != "del_failed")\
         .all()
