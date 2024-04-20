@@ -42,7 +42,7 @@ async def get_documents_list(session: Session = Depends(get_session)):
     doc_list = await admin_knowledge_base.get_documents_list(session)
     return doc_list.model_dump(exclude_none=True)
 
-@admin_knowledge_base_router_protected.get("/validate-documents", status_code=status.HTTP_200_OK)
+@admin_knowledge_base_router_protected.post("/validate-documents", status_code=status.HTTP_200_OK)
 async def get_documents_list(data: ValidateDocumentsRequest, session: Session = Depends(get_session)):
     doc_list = await admin_knowledge_base.validate_filenames(data.file_names, session)
     return doc_list.model_dump()

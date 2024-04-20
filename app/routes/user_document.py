@@ -42,7 +42,7 @@ async def get_documents_list(username: str = Depends(validate_access_token), ses
     doc_list = await user_document.get_documents_list(username, session)
     return doc_list.model_dump(exclude_none=True)
 
-@user_document_router_protected.get("/validate-documents", status_code=status.HTTP_200_OK)
+@user_document_router_protected.post("/validate-documents", status_code=status.HTTP_200_OK)
 async def get_documents_list(data: ValidateDocumentsRequest, username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
     doc_list = await user_document.validate_filenames(username, data.file_names, session)
     return doc_list.model_dump()

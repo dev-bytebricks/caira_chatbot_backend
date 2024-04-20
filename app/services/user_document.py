@@ -126,6 +126,9 @@ def _chunk_data(list, size):
         yield list[i:i + size]
 
 async def validate_filenames(username, file_names: List[str], session: Session):
+    if len(file_names) == 0:
+        return ValidateDocumentsResponse(files=[])
+
     existing_files = session.query(UserDocument.document_name)\
         .options(joinedload(UserDocument.user))\
         .filter(UserDocument.user_id == username, 
