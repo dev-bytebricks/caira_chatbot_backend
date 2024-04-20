@@ -22,7 +22,7 @@ class FileExists(BaseModel):
     exists: bool
 
 class ValidateDocumentsResponse(BaseModel):
-    file: List[FileExists]
+    files: List[FileExists]
 
 class DocumentsListResponse(BaseModel):
     files: List[FileInfo]
