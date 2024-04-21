@@ -30,8 +30,8 @@ async def download_document(file_name: str, username: str = Depends(validate_acc
     return await user_document.get_download_link(username, file_name, session)
 
 @user_document_router_protected.post("/delete-multiple")
-async def enqueue_file_deletions(data: DeleteDocumentsRequest, username: str = Depends(validate_access_token)):
-    response = await user_document.enqueue_file_deletions(username, data.file_names)
+async def enqueue_file_deletions(data: DeleteDocumentsRequest, username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
+    response = await user_document.enqueue_file_deletions(username, data.file_names, session)
     status_code = status.HTTP_200_OK
     if len(response.failed_files) > 0:
         status_code = status.HTTP_417_EXPECTATION_FAILED

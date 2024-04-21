@@ -30,8 +30,8 @@ async def download_document(file_name: str, session: Session = Depends(get_sessi
     return await admin_knowledge_base.get_download_link(file_name, session)
 
 @admin_knowledge_base_router_protected.post("/delete-multiple")
-async def delete_documents(data: DeleteDocumentsRequest):
-    response = await admin_knowledge_base.enqueue_file_deletions(data.file_names)
+async def delete_documents(data: DeleteDocumentsRequest, session: Session = Depends(get_session)):
+    response = await admin_knowledge_base.enqueue_file_deletions(data.file_names, session)
     status_code = status.HTTP_200_OK
     if len(response.failed_files) > 0:
         status_code = status.HTTP_417_EXPECTATION_FAILED

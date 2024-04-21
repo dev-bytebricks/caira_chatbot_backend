@@ -80,7 +80,9 @@ async def get_download_link(file_name, session: Session):
 
 async def get_documents_list(session: Session):
     docs = session.query(KnowledgeBaseDocument)\
-        .filter(KnowledgeBaseDocument.status != "del_failed").order_by(desc(KnowledgeBaseDocument.created_at)).all()
+        .filter(
+            KnowledgeBaseDocument.status != "del_failed", 
+            KnowledgeBaseDocument.status != "to_delete").order_by(desc(KnowledgeBaseDocument.created_at)).all()
     
     # Clean up upload_failed docs after sending them
     session.query(KnowledgeBaseDocument).filter(KnowledgeBaseDocument.status == "upload_failed"
@@ -98,16 +100,43 @@ async def get_documents_list(session: Session):
 
     return DocumentsListResponse(files=files, failed_files=failed_files)
 
-async def enqueue_file_deletions(file_names: List[str]):
-    messages = []
-    for batch in _chunk_data(file_names, size=256):
-        message_body = json.dumps({"file_names": batch})
-        messages.append(message_body)
-    failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_KNOWLEDGEBASE_FILE_DELETE_QUEUE_NAME, messages)
+async def enqueue_file_deletions(file_names: List[str], session: Session):
     failed_files = []
+    existing_file_names = []
+
+    for file_name in file_names:
+        # check if file exists in database with completed status
+        doc = session.query(KnowledgeBaseDocument)\
+            .filter(KnowledgeBaseDocument.document_name == file_name,
+                    KnowledgeBaseDocument.status == "Completed").first()
+        if doc:
+            existing_file_names.append(file_name)
+        else:
+            # error logging can be made more descriptive using status
+            failed_files.append(FileInfo(filename=file_name, error="File does not exists"))
+
+    messages_to_enqueue = []
+    for batch in _chunk_data(existing_file_names, size=256):
+        message_body = json.dumps({"file_names": batch})
+        messages_to_enqueue.append(message_body)
+    failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_KNOWLEDGEBASE_FILE_DELETE_QUEUE_NAME, messages_to_enqueue)
+    
+    sucessfully_queued_messages = messages_to_enqueue
+
     for msg, error in failed_messages:
+        sucessfully_queued_messages.remove(msg)
         failed_file_names = json.loads(msg)["file_names"]
         failed_files.extend([FileInfo(filename=failed_file_name, error=error) for failed_file_name in failed_file_names])
+
+    # update file status to "to_delete" in database
+    for msg in sucessfully_queued_messages:
+        for queued_file_name in json.loads(msg)["file_names"]:
+            user_doc = session.query(KnowledgeBaseDocument)\
+                .filter(KnowledgeBaseDocument.document_name == queued_file_name).first()
+            user_doc.status = "to_delete"
+            session.add(user_doc)
+            session.commit()
+
     return DeleteDocumentsResponse(failed_files=failed_files)
 
 async def get_azure_storage_token():

@@ -36,6 +36,7 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
                 UserDocument.status != "del_failed").first()
         if user_doc:
             # add logging for multiple statuses here (for completed status show same file exists but for other statuses show file upload is in progress)
+            # for to_delete status, we can say try again later
             failed_files.append(FileInfo(filename=file_name, error="File with same name already exists"))
         else:
             files_to_enqueue.append(file_info)
@@ -87,7 +88,8 @@ async def get_documents_list(username, session: Session):
     user_docs = session.query(UserDocument).options(joinedload(UserDocument.user))\
         .filter(
             UserDocument.user_id == username,
-            UserDocument.status != "del_failed"
+            UserDocument.status != "del_failed",
+            UserDocument.status != "to_delete"
             ).order_by(desc(UserDocument.created_at)).all()
     
     # Clean up upload_failed docs after sending them
@@ -109,16 +111,46 @@ async def get_documents_list(username, session: Session):
 
     return DocumentsListResponse(files=files, failed_files=failed_files)
 
-async def enqueue_file_deletions(username, file_names: List[str]):
-    messages = []
-    for batch in _chunk_data(file_names, size=256):
-        message_body = json.dumps({"user_name": username, "file_names": batch})
-        messages.append(message_body)
-    failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_CONSUMER_FILE_DELETE_QUEUE_NAME, messages)
+async def enqueue_file_deletions(username, file_names: List[str], session: Session):
     failed_files = []
+    existing_file_names = []
+
+    for file_name in file_names:
+       # check if file exists in database with completed status
+        user_doc = session.query(UserDocument).options(joinedload(UserDocument.user))\
+            .filter(UserDocument.user_id == username, 
+                UserDocument.document_name == file_name,
+                UserDocument.status == "Completed").first()
+        if user_doc:
+            existing_file_names.append(file_name)
+        else:
+            # error logging can be made more descriptive using status
+            failed_files.append(FileInfo(filename=file_name, error="File does not exists"))
+
+    messages_to_enqueue = []
+    for batch in _chunk_data(existing_file_names, size=256):
+        message_body = json.dumps({"user_name": username, "file_names": batch})
+        messages_to_enqueue.append(message_body)
+    failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_CONSUMER_FILE_DELETE_QUEUE_NAME, messages_to_enqueue)
+    
+    sucessfully_queued_messages = messages_to_enqueue
+
     for msg, error in failed_messages:
+        sucessfully_queued_messages.remove(msg)
         failed_file_names = json.loads(msg)["file_names"]
         failed_files.extend([FileInfo(filename=failed_file_name, error=error) for failed_file_name in failed_file_names])
+
+    # update file status to "to_delete" in database
+    for msg in sucessfully_queued_messages:
+        for queued_file_name in json.loads(msg)["file_names"]:
+            user_doc = session.query(UserDocument).options(joinedload(UserDocument.user))\
+                .filter(
+                    UserDocument.user_id == username, 
+                    UserDocument.document_name == queued_file_name).first()
+            user_doc.status = "to_delete"
+            session.add(user_doc)
+            session.commit()
+
     return DeleteDocumentsResponse(failed_files=failed_files)
 
 def _chunk_data(list, size):
