@@ -44,7 +44,7 @@ async def enqueue_gdrive_upload(gdrivelink, session: Session):
         return GdriveUploadResponse(queued_files=[], failed_files=failed_files)
 
     messages = []
-    for batch in _chunk_data(files_to_enqueue, size=5):
+    for batch in _chunk_data(files_to_enqueue, size=200):
         message_body = json.dumps({"files_info": batch})
         messages.append(message_body)
     failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_KNOWLEDGEBASE_GDRIVE_UPLOAD_QUEUE_NAME, messages)

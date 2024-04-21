@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
     files_info = await gdrive.get_files_info_from_link(gdrivelink)
 
-    if len(files_info) > 20:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 20 files are allowed per Google Drive link")
+    # if len(files_info) > 20:
+    #      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 20 files are allowed per Google Drive link")
     
     failed_files = []
     files_to_enqueue = []
@@ -45,7 +45,7 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
         return GdriveUploadResponse(queued_files=[], failed_files=failed_files)
 
     messages = []
-    for batch in _chunk_data(files_to_enqueue, size=5):
+    for batch in _chunk_data(files_to_enqueue, size=20):
         message_body = json.dumps({"user_name": username, "files_info": batch})
         messages.append(message_body)
     failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_CONSUMER_GDRIVE_UPLOAD_QUEUE_NAME, messages)

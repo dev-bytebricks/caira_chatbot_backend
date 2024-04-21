@@ -41,6 +41,7 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
 
     # get knowledge base retriever
     kb_vector_store = get_vector_store_instance(settings.PINECONE_KNOWLEDGE_BASE_INDEX, None)
+    # use doc names from kb db to cover edge cases for kb retriever
     kb_retriever = kb_vector_store.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 50})
     kb_retriever_tool = create_retriever_tool(
         kb_retriever,
@@ -78,6 +79,7 @@ def construct_kb_chain(username):
     vectorstore = get_vector_store_instance(settings.PINECONE_KNOWLEDGE_BASE_INDEX, None)
     
     # get knowledge base retriever
+    # use doc names from kb db to cover edge cases for kb retriever
     retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 50})
     retriever_tool = create_retriever_tool(
         retriever,
