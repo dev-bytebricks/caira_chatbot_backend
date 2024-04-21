@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
     files_info = await gdrive.get_files_info_from_link(gdrivelink)
 
-    # if len(files_info) > 20:
-    #      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 20 files are allowed per Google Drive link")
+    if len(files_info) > 20:
+         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 20 files are allowed per Google Drive link")
     
     failed_files = []
     files_to_enqueue = []
@@ -64,7 +64,7 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
             file_name += ".pdf"
         session.add(UserDocument(user_id=username, document_name=file_name, content_type=file_type, status="Transferring From Google Drive"))
         session.commit()
-        queued_files.append(FileInfo(filename=file_to_enqueue["name"]))
+        queued_files.append(FileInfo(filename=file_to_enqueue["name"], status="Transferring From Google Drive"))
 
     return GdriveUploadResponse(queued_files=queued_files, failed_files=failed_files)
 
