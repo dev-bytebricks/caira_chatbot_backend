@@ -18,7 +18,7 @@ def get_qa_chain(session: Session, username):
         user_id=username,
         status="Completed").all()
     if len(user_docs) > 0:
-        return construct_kb_consumer_chain(username, [f"{username}/{user_doc.document_name}" for user_doc in user_docs])
+        return construct_kb_consumer_chain(username, [f"{username}:{user_doc.document_name}" for user_doc in user_docs])
     return construct_kb_chain(username)
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
@@ -30,10 +30,8 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
     consumer_retriever = vectorstore.as_retriever(search_type = "mmr", 
                                                   search_kwargs={
                                                       'k': 3, 
-                                                      'fetch_k': 50, 
-                                                      'filter': {"file_name": {
-                                                           "$in":[f"{username}:{doc_name}" for doc_name in consumer_doc_names]
-                                                           }}
+                                                      'fetch_k': 50,
+                                                      'filter': {"file_name": {"$in": consumer_doc_names}}
                                                        })
     consumer_retriever_tool = create_retriever_tool(
         consumer_retriever,
