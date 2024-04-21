@@ -67,8 +67,8 @@ def construct_kb_consumer_chain(username, consumer_doc_names):
     agentExecutor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=False,
-        return_intermediate_steps=True
+        verbose=True,
+        return_intermediate_steps=True,
         # return_intermediate_steps=False
     ).with_config({"tags": ["execute-kb+docs-retriever-agent"], "metadata": {"user-email": username}})
 
@@ -104,7 +104,7 @@ def construct_kb_chain(username):
     agentExecutor = AgentExecutor(
         agent=agent,
         tools=tools,
-        verbose=False,
+        verbose=True,
         return_intermediate_steps=True
         # return_intermediate_steps=False
     ).with_config({"tags": ["execute-kb-retriever-agent"], "metadata": {"user-email": username}})
