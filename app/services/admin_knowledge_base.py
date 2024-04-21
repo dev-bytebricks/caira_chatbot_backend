@@ -19,6 +19,16 @@ async def enqueue_gdrive_upload(gdrivelink, session: Session):
     if len(files_info) > 200:
          raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 200 files are allowed per Google Drive link")
 
+    unique_files = {}
+    for file_info in files_info:
+        file_name = file_info["name"]
+        # Add file info to the dictionary if the name has not been added yet
+        if file_name not in unique_files:
+            unique_files[file_name] = file_info
+
+    # Now unique_files contains only one entry per file name
+    files_info = list(unique_files.values()) 
+
     failed_files = []
     files_to_enqueue = []
 
