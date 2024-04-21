@@ -139,6 +139,10 @@ async def enqueue_file_deletions(username, file_names: List[str], session: Sessi
                 UserDocument.status == "Completed").first()
         if user_doc:
             existing_file_names.append(file_name)
+            # change file status to be deleted
+            user_doc.status = "to_delete"
+            session.add(user_doc)
+            session.commit()
         else:
             # error logging can be made more descriptive using status
             failed_files.append(FileInfo(filename=file_name, error="File does not exists"))
@@ -149,21 +153,16 @@ async def enqueue_file_deletions(username, file_names: List[str], session: Sessi
         messages_to_enqueue.append(message_body)
     failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_CONSUMER_FILE_DELETE_QUEUE_NAME, messages_to_enqueue)
     
-    sucessfully_queued_messages = messages_to_enqueue
-
     for msg, error in failed_messages:
-        sucessfully_queued_messages.remove(msg)
         failed_file_names = json.loads(msg)["file_names"]
-        failed_files.extend([FileInfo(filename=failed_file_name, error=error) for failed_file_name in failed_file_names])
-
-    # update file status to "to_delete" in database
-    for msg in sucessfully_queued_messages:
-        for queued_file_name in json.loads(msg)["file_names"]:
+        for failed_file_name in failed_file_names:
+            failed_files.append(FileInfo(filename=failed_file_name, error=error))
+            # revert status to completed for failed files
             user_doc = session.query(UserDocument).options(joinedload(UserDocument.user))\
                 .filter(
                     UserDocument.user_id == username, 
-                    UserDocument.document_name == queued_file_name).first()
-            user_doc.status = "to_delete"
+                    UserDocument.document_name == failed_file_name).first()
+            user_doc.status = "Completed"
             session.add(user_doc)
             session.commit()
 
