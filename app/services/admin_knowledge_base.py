@@ -54,12 +54,18 @@ async def enqueue_gdrive_upload(gdrivelink, session: Session):
         files_to_enqueue = [item for item in files_to_enqueue if item not in failed_files_info]
         failed_files.extend([FileInfo(filename=failed_file_info["name"], error=error) for failed_file_info in failed_files_info])
     
-    # update status of files in db which are queued for transfer
-    for enqueued_file in files_to_enqueue:
-        pass
-    
-    return GdriveUploadResponse(queued_files=[FileInfo(filename=file_to_enqueue["name"]) for file_to_enqueue in files_to_enqueue], 
-                                failed_files=failed_files)
+    queued_files = []
+    # create file entry with transferring status for files in db
+    for file_to_enqueue in files_to_enqueue:
+        file_name = file_to_enqueue["name"]
+        file_type = file_to_enqueue["mimeType"]
+        if file_type == "application/vnd.google-apps.document":
+            file_name += ".pdf"
+        session.add(KnowledgeBaseDocument(document_name=file_name, content_type=file_type, status="Transferring From Google Drive"))
+        session.commit()
+        queued_files.append(FileInfo(filename=file_to_enqueue["name"]))
+
+    return GdriveUploadResponse(queued_files=queued_files, failed_files=failed_files)
 
 async def get_download_link(file_name, session: Session):
     file_not_found_exec = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
