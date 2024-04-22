@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from sqlalchemy.dialects.mysql import DATETIME
 import enum
-from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String, ForeignKey, Enum, Text
+from sqlalchemy import Boolean, Column, Integer, Numeric, String, ForeignKey, Enum, Text, func
 from app.common.database import Base
 from sqlalchemy.orm import mapped_column, relationship
 
@@ -16,9 +16,9 @@ class User(Base):
     password = Column(String(100))
     is_active = Column(Boolean, default=False)
     role = Column(Enum(Role), nullable=False)
-    verified_at = Column(DateTime, nullable=True, default=None)
-    updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now(timezone.utc))
-    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    verified_at = Column(DATETIME(fsp=3), nullable=True, default=None)
+    updated_at = Column(DATETIME(fsp=3), nullable=True, default=None, onupdate=func.now())
+    created_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
     
     tokens = relationship("UserToken", back_populates="user")
     documents = relationship("UserDocument", back_populates="user")
@@ -31,8 +31,8 @@ class UserToken(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = mapped_column(ForeignKey('users.email'))
     refresh_token = Column(String(250), nullable=True, index=True, default=None)
-    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
-    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
+    expires_at = Column(DATETIME(fsp=3), nullable=False)
     
     user = relationship("User", back_populates="tokens")
 
@@ -43,8 +43,8 @@ class UserDocument(Base):
     document_name = Column(String(length=250, collation="utf8mb3_bin"), nullable=True, index=True, default=None)
     content_type = Column(String(250), nullable=True, index=True, default=None)
     status = Column(String(100), nullable=True, index=True, default=None)
-    updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now(timezone.utc))
-    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(DATETIME(fsp=3), nullable=True, default=None, onupdate=func.now())
+    created_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
     
     user = relationship("User", back_populates="documents")
 
@@ -60,7 +60,7 @@ class AdminConfig(Base):
     disclaimers = Column(String(500), nullable=False, default=None)
     gdrive_enabled = Column(Boolean, nullable=False, default=False)
     logo_link = Column(String(250), nullable=False, default=None)
-    updated_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
 
 class KnowledgeBaseDocument(Base):
     __tablename__ = "knowledgebase_documents"
@@ -68,5 +68,5 @@ class KnowledgeBaseDocument(Base):
     document_name = Column(String(length=250, collation="utf8mb3_bin"), nullable=True, index=True, default=None)
     content_type = Column(String(250), nullable=True, index=True, default=None)
     status = Column(String(100), nullable=True, index=True, default=None)
-    updated_at = Column(DateTime, nullable=True, default=None, onupdate=datetime.now(timezone.utc))
-    created_at = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
+    updated_at = Column(DATETIME(fsp=3), nullable=True, default=None, onupdate=func.now())
+    created_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
