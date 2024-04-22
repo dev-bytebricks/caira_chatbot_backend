@@ -71,9 +71,9 @@ async def enqueue_gdrive_upload(gdrivelink, session: Session):
         file_type = file_to_enqueue["mimeType"]
         if file_type == "application/vnd.google-apps.document":
             file_name += ".pdf"
-        session.add(KnowledgeBaseDocument(document_name=file_name, content_type=file_type, status="Transferring From Google Drive"))
+        session.add(KnowledgeBaseDocument(document_name=file_name, content_type=file_type, status="Queued For Google Drive Transfer"))
         session.commit()
-        queued_files.append(FileInfo(filename=file_name, status="Transferring From Google Drive"))
+        queued_files.append(FileInfo(filename=file_name, status="Queued For Google Drive Transfer"))
 
     return GdriveUploadResponse(queued_files=queued_files, failed_files=failed_files)
 

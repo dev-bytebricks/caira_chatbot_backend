@@ -55,7 +55,8 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
         return GdriveUploadResponse(queued_files=[], failed_files=failed_files)
 
     messages = []
-    for batch in _chunk_data(files_to_enqueue, size=20):
+    # revert size to 20
+    for batch in _chunk_data(files_to_enqueue, size=500):
         message_body = json.dumps({"user_name": username, "files_info": batch})
         messages.append(message_body)
     failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_CONSUMER_GDRIVE_UPLOAD_QUEUE_NAME, messages)
@@ -72,9 +73,9 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
         file_type = file_to_enqueue["mimeType"]
         if file_type == "application/vnd.google-apps.document":
             file_name += ".pdf"
-        session.add(UserDocument(user_id=username, document_name=file_name, content_type=file_type, status="Transferring From Google Drive"))
+        session.add(UserDocument(user_id=username, document_name=file_name, content_type=file_type, status="Queued For Google Drive Transfer"))
         session.commit()
-        queued_files.append(FileInfo(filename=file_name, status="Transferring From Google Drive"))
+        queued_files.append(FileInfo(filename=file_name, status="Queued For Google Drive Transfer"))
 
     return GdriveUploadResponse(queued_files=queued_files, failed_files=failed_files)
 
