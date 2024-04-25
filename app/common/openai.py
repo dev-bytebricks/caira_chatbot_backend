@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class OpenAIManager:
 
-    OPENAI_EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-ada-002", openai_api_key=settings.OPENAI_API_KEY)
+    OPENAI_EMBEDDINGS = OpenAIEmbeddings(model="text-embedding-3-small", openai_api_key=settings.OPENAI_API_KEY)
     OPENAI_CHAT: ChatOpenAI
 
     @classmethod
