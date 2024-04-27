@@ -1,6 +1,6 @@
 from sqlalchemy.dialects.mysql import DATETIME
 import enum
-from sqlalchemy import Boolean, Column, Integer, Numeric, String, ForeignKey, Enum, Text, func
+from sqlalchemy import Boolean, Column, Integer, Numeric, String, ForeignKey, Enum, Text, func, Index
 from app.common.database import Base
 from sqlalchemy.orm import mapped_column, relationship
 
@@ -45,7 +45,12 @@ class UserDocument(Base):
     status = Column(String(100), nullable=True, index=True, default=None)
     updated_at = Column(DATETIME(fsp=3), nullable=True, default=None, onupdate=func.now())
     created_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
-    
+
+    __table_args__ = (
+        Index("idx_user_id_document_name", "user_id", "document_name"),
+        Index("idx_user_id_document_name_status", "user_id", "document_name", "status"),
+    )
+
     user = relationship("User", back_populates="documents")
 
 class AdminConfig(Base):
@@ -70,3 +75,7 @@ class KnowledgeBaseDocument(Base):
     status = Column(String(100), nullable=True, index=True, default=None)
     updated_at = Column(DATETIME(fsp=3), nullable=True, default=None, onupdate=func.now())
     created_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
+
+    __table_args__ = (
+        Index("idx_document_name_status", "document_name", "status"),
+    )

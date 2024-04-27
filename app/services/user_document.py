@@ -7,7 +7,7 @@ from app.models.user import UserDocument
 from app.schemas.responses.user_document import FileInfo, GdriveUploadResponse, DeleteDocumentsResponse, DocumentsListResponse, ValidateDocumentsResponse, FileExists
 from app.common import gdrive, azurecloud
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import desc
+from sqlalchemy import case, desc
 
 settings = get_settings()
 
@@ -44,6 +44,7 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
             .filter(UserDocument.user_id == username, 
                 UserDocument.document_name == file_name,
                 UserDocument.status != "del_failed").first()
+        
         if user_doc:
             # add logging for multiple statuses here (for completed status show same file exists but for other statuses show file upload is in progress)
             # for to_delete status, we can say try again later
@@ -53,18 +54,6 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
 
     if len(files_to_enqueue) == 0:
         return GdriveUploadResponse(queued_files=[], failed_files=failed_files)
-
-    messages = []
-    for batch in _chunk_data(files_to_enqueue, size=100):
-    # for batch in _chunk_data(files_to_enqueue, size=20):
-        message_body = json.dumps({"user_name": username, "files_info": batch})
-        messages.append(message_body)
-    failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_CONSUMER_GDRIVE_UPLOAD_QUEUE_NAME, messages)
-
-    for msg, error in failed_messages:
-        failed_files_info = json.loads(msg)["files_info"]
-        files_to_enqueue = [item for item in files_to_enqueue if item not in failed_files_info]
-        failed_files.extend([FileInfo(filename=failed_file_info["name"], error=error) for failed_file_info in failed_files_info])
     
     queued_files = []
     # create file entry with transferring status for files in db
@@ -75,7 +64,37 @@ async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
             file_name += ".pdf"
         session.add(UserDocument(user_id=username, document_name=file_name, content_type=file_type, status="Queued For Google Drive Transfer"))
         session.commit()
+        # assume that file has been queued and handle failure after actual queuing
         queued_files.append(FileInfo(filename=file_name, status="Queued For Google Drive Transfer"))
+
+    # queue files in batches
+    messages_to_enqueue = []
+    for batch in _chunk_data(files_to_enqueue, size=100):
+    # for batch in _chunk_data(files_to_enqueue, size=20):
+        message_body = json.dumps({"user_name": username, "files_info": batch})
+        messages_to_enqueue.append(message_body)
+    
+    failed_messages = await azurecloud.send_messages_to_queue(settings.AZURE_STORAGE_CONSUMER_GDRIVE_UPLOAD_QUEUE_NAME, messages_to_enqueue)
+
+    # handle failed to enqueue files
+    for msg, error in failed_messages:
+        failed_files_info = json.loads(msg)["files_info"]
+        for failed_file_info in failed_files_info:
+            file_name = failed_file_info["name"]
+            file_type = failed_file_info["mimeType"]
+            if file_type == "application/vnd.google-apps.document":
+                file_name += ".pdf"
+            # update failed files and queued files list
+            failed_files.append(FileInfo(filename=file_name, error=error))
+            queued_files = [file for file in queued_files if not (file.filename == file_name and file.status == "Queued For Google Drive Transfer")]
+            # remove file entry from db
+            session.query(UserDocument).options(joinedload(UserDocument.user))\
+                .filter(
+                    UserDocument.user_id == username, 
+                    UserDocument.document_name == file_name,
+                    UserDocument.status == "Queued For Google Drive Transfer"
+                    ).delete(synchronize_session='fetch')
+            session.commit()
 
     return GdriveUploadResponse(queued_files=queued_files, failed_files=failed_files)
 
@@ -102,13 +121,36 @@ async def get_azure_storage_token():
     return {"azure_storage_token": token}
 
 async def get_documents_list(username, session: Session):
-    user_docs = session.query(UserDocument).options(joinedload(UserDocument.user))\
+
+    uploaded_user_docs = session.query(
+        UserDocument.document_name,
+        UserDocument.content_type, 
+        UserDocument.status)\
         .filter(
             UserDocument.user_id == username,
-            UserDocument.status != "del_failed",
-            UserDocument.status != "to_delete"
+            UserDocument.status == "Completed"
             ).order_by(desc(UserDocument.created_at)).all()
-    
+
+    failed_user_docs = session.query(
+        UserDocument.document_name,
+        UserDocument.content_type, 
+        case((UserDocument.status == 'upload_failed', 'Upload Failed'), else_=UserDocument.status).label("status"))\
+        .filter(
+            UserDocument.user_id == username,
+            UserDocument.status == "upload_failed"
+            ).order_by(desc(UserDocument.created_at)).all()
+
+    processing_user_docs = session.query(
+        UserDocument.document_name,
+        UserDocument.content_type, 
+        case((UserDocument.status == 'to_delete', 'Deleting'), else_=UserDocument.status).label("status"))\
+        .filter(
+            UserDocument.user_id == username,
+            UserDocument.status != "upload_failed",
+            UserDocument.status != "Completed",
+            UserDocument.status != "del_failed"
+            ).order_by(desc(UserDocument.created_at)).all()
+
     # Clean up upload_failed docs after sending them
     session.query(UserDocument).options(joinedload(UserDocument.user))\
         .filter(
@@ -116,17 +158,13 @@ async def get_documents_list(username, session: Session):
             UserDocument.status == "upload_failed"
             ).delete(synchronize_session='fetch')
     session.commit()
-    
-    files = []
-    failed_files = []
 
-    for user_doc in user_docs:
-        if user_doc.status == "upload_failed":
-            failed_files.append(FileInfo(filename=user_doc.document_name, content_type=user_doc.content_type, status="Failed to process file"))
-        else:
-            files.append(FileInfo(filename=user_doc.document_name, content_type=user_doc.content_type, status=user_doc.status))
+    # Map query results to FileInfo
+    uploaded_files = [FileInfo(filename=doc[0], content_type=doc[1], status=doc[2]) for doc in uploaded_user_docs]
+    failed_files = [FileInfo(filename=doc[0], content_type=doc[1], status=doc[2]) for doc in failed_user_docs]
+    processing_files = [FileInfo(filename=doc[0], content_type=doc[1], status=doc[2]) for doc in processing_user_docs]
 
-    return DocumentsListResponse(files=files, failed_files=failed_files)
+    return DocumentsListResponse(uploaded_files=uploaded_files, processing_files=processing_files, failed_files=failed_files)
 
 async def enqueue_file_deletions(username, file_names: List[str], session: Session):
     failed_files = []

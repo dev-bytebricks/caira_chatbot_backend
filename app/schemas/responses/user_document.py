@@ -25,5 +25,6 @@ class ValidateDocumentsResponse(BaseModel):
     files: List[FileExists]
 
 class DocumentsListResponse(BaseModel):
-    files: List[FileInfo]
+    uploaded_files: List[FileInfo]
+    processing_files: List[FileInfo]
     failed_files: List[FileInfo]
