@@ -55,3 +55,7 @@ async def fetch_app_info(session: Session = Depends(get_session)):
 async def logout_user(username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
     await user.logout_user(username, session)
     return JSONResponse({"message": "You have been logged out successfully."})
+
+@user_router_protected.get("/pubsub-token", status_code=status.HTTP_200_OK)
+async def generate_pubsub_client_token(userdata = Depends(get_current_user)):
+    return await user.generate_pubsub_client_token(userdata)

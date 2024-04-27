@@ -1,15 +1,25 @@
 import asyncio
 from datetime import datetime, timedelta, timezone
+import json
 import logging
 from typing import List
 from app.common.settings import get_settings
 from azure.storage.blob import generate_blob_sas, generate_container_sas, BlobSasPermissions, ContainerSasPermissions, ContainerClient
 from azure.storage.queue.aio import QueueServiceClient, QueueClient
 from azure.storage.queue import TextBase64EncodePolicy, TextBase64DecodePolicy
+from azure.messaging.webpubsubservice.aio import WebPubSubServiceClient
+from azure.core.credentials import AzureKeyCredential
 
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
+WEB_PUBSUB_ADMIN_GROUP = "admin"
+
+web_pubsub_client: WebPubSubServiceClient = WebPubSubServiceClient(
+    endpoint=settings.AZURE_WEB_PUBSUB_ENDPOINT, 
+    credential=AzureKeyCredential(settings.AZURE_WEB_PUBSUB_KEY), 
+    hub="notification")
 
 consumer_container_client: ContainerClient = ContainerClient.from_connection_string(
     conn_str=settings.AZURE_STORAGE_CONNECTION_STRING, 
@@ -22,6 +32,29 @@ kb_container_client: ContainerClient = ContainerClient.from_connection_string(
 queue_service_client: QueueServiceClient = QueueServiceClient.from_connection_string(
     conn_str=settings.AZURE_STORAGE_CONNECTION_STRING
 )
+
+async def notify_all_app_events(event_type):
+    await web_pubsub_client.send_to_all(message=json.dumps({"event_type": event_type}))
+
+# async def notify_user_file_events(user_id, file_name, status, event_type):
+#     await web_pubsub_client.send_to_user(user_id=user_id, 
+#                                                message=json.dumps({"file_name": file_name, 
+#                                                                    "status": status,
+#                                                                    "event_type": event_type}))
+
+# async def notify_kb_file_events(file_name, status, event_type):
+#     await web_pubsub_client.send_to_group(group=WEB_PUBSUB_ADMIN_GROUP, 
+#                                                 message=json.dumps({"file_name": file_name, 
+#                                                                     "status": status,
+#                                                                     "event_type": event_type}))
+
+async def get_pubsub_client_token_admin(username):
+    response = await web_pubsub_client.get_client_access_token(user_id=username, groups=[WEB_PUBSUB_ADMIN_GROUP])
+    return response["token"]
+
+async def get_pubsub_client_token(username):
+    response = await web_pubsub_client.get_client_access_token(user_id=username)
+    return response["token"]
 
 def blob_exists(blob_name):
     blob = consumer_container_client.get_blob_client(blob=blob_name)

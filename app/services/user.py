@@ -3,8 +3,8 @@ import logging
 import uuid
 from fastapi import HTTPException, status
 from app.common.security import delete_refresh_tokens_from_db, get_user_from_db, hash_password, is_password_strong_enough, verify_password
-from app.common import getzep
-from app.models.user import AdminConfig, User
+from app.common import getzep, azurecloud
+from app.models.user import AdminConfig, User, Role
 from app.services import email
 from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT
 
@@ -153,3 +153,10 @@ async def fetch_app_info(session):
     if admin_config is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="App info not found in database.")
     return admin_config
+
+async def generate_pubsub_client_token(user: User):
+    if user.role == Role.Admin:
+        token = await azurecloud.get_pubsub_client_token_admin(user.email)
+    else:
+        token = await azurecloud.get_pubsub_client_token(user.email)
+    return {"token": token}

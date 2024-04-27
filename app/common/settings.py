@@ -61,6 +61,10 @@ class Settings(BaseSettings):
     AZURE_STORAGE_CONSUMER_GDRIVE_UPLOAD_QUEUE_NAME: str
     AZURE_STORAGE_KNOWLEDGEBASE_GDRIVE_UPLOAD_QUEUE_NAME: str
 
+    # Azure Web Pubsub Config
+    AZURE_WEB_PUBSUB_ENDPOINT: str
+    AZURE_WEB_PUBSUB_KEY: str
+
     # OpenAI Config
     OPENAI_API_KEY: str
 

@@ -3,6 +3,7 @@ from fastapi import HTTPException, status
 from app.models.user import AdminConfig as AdminConfigModel
 from app.common.adminconfig import AdminConfig
 from app.common.openai import OpenAIManager
+from app.common import azurecloud
 
 async def update_admin_config(data, session):
     admin_config = await get_admin_config(session)
@@ -19,6 +20,7 @@ async def update_admin_config(data, session):
     session.commit()
     AdminConfig.update_config()
     OpenAIManager.update_openai_chat_instance()
+    await azurecloud.notify_all_app_events("app_info_updated")
 
 async def get_admin_config(session):
     admin_config = session.query(AdminConfigModel).first()
