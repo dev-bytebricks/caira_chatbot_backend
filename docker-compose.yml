@@ -90,40 +90,40 @@ services:
     volumes:
       - .:/app/
 
-  smtp-service:
-    image: axllent/mailpit
-    restart: unless-stopped
-    container_name: smtp
-    networks:
-      - zep-network
-    ports:
-      - "8025:8025"
-      - "1025:1025"
+  # smtp-service:
+  #   image: axllent/mailpit
+  #   restart: unless-stopped
+  #   container_name: smtp
+  #   networks:
+  #     - zep-network
+  #   ports:
+  #     - "8025:8025"
+  #     - "1025:1025"
   
-  mysql-service:
-    image: mysql/mysql-server:8.0.32
-    command: ["--default-authentication-plugin=mysql_native_password"]
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: $MYSQL_PASSWORD
-      MYSQL_ROOT_HOST: '%'
-      MYSQL_DATABASE: $MYSQL_DB
-      MYSQL_PORT: $MYSQL_PORT
-    networks:
-      - zep-network
-    volumes:
-      - mysql_db:/var/lib/mysql
+  # mysql-service:
+  #   image: mysql/mysql-server:8.0.32
+  #   command: ["--default-authentication-plugin=mysql_native_password"]
+  #   container_name: mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: $MYSQL_PASSWORD
+  #     MYSQL_ROOT_HOST: '%'
+  #     MYSQL_DATABASE: $MYSQL_DB
+  #     MYSQL_PORT: $MYSQL_PORT
+  #   networks:
+  #     - zep-network
+  #   volumes:
+  #     - mysql_db:/var/lib/mysql
 
-  adminer-service:
-    image: adminer:latest
-    restart: unless-stopped
-    container_name: adminer
-    depends_on:
-      - mysql-service
-    networks:
-      - zep-network
-    ports:
-      - "8080:8080"
+  # adminer-service:
+  #   image: adminer:latest
+  #   restart: unless-stopped
+  #   container_name: adminer
+  #   depends_on:
+  #     - mysql-service
+  #   networks:
+  #     - zep-network
+  #   ports:
+  #     - "8080:8080"
   
 networks:
   zep-network:
