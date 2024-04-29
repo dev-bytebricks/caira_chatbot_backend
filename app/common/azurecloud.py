@@ -49,7 +49,7 @@ async def notify_all_app_events(event_type):
 #                                                                     "event_type": event_type}))
 
 async def get_pubsub_client_token_admin(username):
-    response = await web_pubsub_client.get_client_access_token(user_id=username, groups=[WEB_PUBSUB_ADMIN_GROUP])
+    response = await web_pubsub_client.get_client_access_token(user_id=username, roles=[f"webpubsub.joinLeaveGroup.{WEB_PUBSUB_ADMIN_GROUP}"])
     return response["token"]
 
 async def get_pubsub_client_token(username):
