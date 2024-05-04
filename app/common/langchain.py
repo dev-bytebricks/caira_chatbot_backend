@@ -2,11 +2,11 @@ from app.common.openai import OpenAIManager
 from app.common.settings import get_settings
 from app.common.vectorstore import get_vector_store_instance
 from app.common.adminconfig import AdminConfig
-from app.models.user import UserDocument
+from app.models.user import UserDocument, KnowledgeBaseDocument
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.tools.retriever import create_retriever_tool
-from langchain.agents import create_openai_functions_agent, AgentExecutor
+from langchain.chains.history_aware_retriever import create_history_aware_retriever
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableParallel
 from operator import itemgetter
 from sqlalchemy.orm import Session
 
@@ -14,102 +14,136 @@ from sqlalchemy.orm import Session
 settings = get_settings()
 
 def get_qa_chain(session: Session, username):
+    kb_docs = session.query(KnowledgeBaseDocument).filter_by(
+        status="Completed").all()
     user_docs = session.query(UserDocument).filter_by(
         user_id=username,
         status="Completed").all()
+    
     if len(user_docs) > 0:
-        return construct_kb_consumer_chain(username, [f"{username}:{user_doc.document_name}" for user_doc in user_docs])
-    return construct_kb_chain(username)
+        return construct_kb_consumer_chain(username, 
+                                           __get_consumer_retriever_tool([f"{username}:{user_doc.document_name}" for user_doc in user_docs], 3), 
+                                           __get_kb_retriever_tool([kb_doc.document_name for kb_doc in kb_docs], 3))
+    
+    return construct_kb_chain(username, 
+                              __get_kb_retriever_tool([kb_doc.document_name for kb_doc in kb_docs], 4))
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
-def construct_kb_consumer_chain(username, consumer_doc_names):
-    # get consumer retriever
-    vectorstore = get_vector_store_instance(settings.PINECONE_CONSUMER_INDEX, None)
+def construct_kb_consumer_chain(username, consumer_retriever_tool, kb_retriever_tool):
 
-    # use "in" conditon in filter of vectorstore to compare with document ids stored in db
-    consumer_retriever = vectorstore.as_retriever(search_type = "mmr", 
-                                                  search_kwargs={
-                                                      'k': 3, 
-                                                      'fetch_k': 50,
-                                                      'filter': {"file_name": {"$in": consumer_doc_names}}
-                                                       })
-    consumer_retriever_tool = create_retriever_tool(
-        consumer_retriever,
-        "user_uploaded_file",
-        "use this tool to access user's information regarding their particular scenario or circumstances"
-    )
-
-    # get knowledge base retriever
-    kb_vector_store = get_vector_store_instance(settings.PINECONE_KNOWLEDGE_BASE_INDEX, None)
-    # use doc names from kb db to cover edge cases for kb retriever
-    kb_retriever = kb_vector_store.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 50})
-    kb_retriever_tool = create_retriever_tool(
-        kb_retriever,
-        "law_knowledgebase",
-        "use this tool as your core knowledge base to get any information about laws"
-    )
-
-    tools = [consumer_retriever_tool, kb_retriever_tool]
-
-    retriever_prompt = ChatPromptTemplate.from_messages([
-        ('system', f"""You are a {AdminConfig.LLM_ROLE}. You should always use the provided tools to respond. {AdminConfig.LLM_PROMPT}"""),
+    prompt = ChatPromptTemplate.from_messages([
+        ('system', f"You are a {AdminConfig.LLM_ROLE}.\n{AdminConfig.LLM_PROMPT}." +
+        # "Assume that the user is self representing. Therefore you must not recommend seeking legal advice. You must use British English spelling of words and not use the term custody because it's American. Bullet proof your answers where appropriate and ensure that sentences have max 10 words. Refrain from starting your sentences with given or remember.."
+        "\n\nYou should ALWAYS and ONLY reference the following cases and legal acts to support your answer:'''{laws_from_kb}'''" +
+        "\n\nUser's Scenario:\n'''{user_scenario}'''"),
         MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad")
+        ("human", "{input}")
     ])
     
-    agent = create_openai_functions_agent(
-        llm=OpenAIManager.OPENAI_CHAT,
-        prompt=retriever_prompt,
-        tools=tools,
+    output_parser = StrOutputParser()
+    setup_and_retrieval = RunnableParallel(
+        {"user_scenario": consumer_retriever_tool, "laws_from_kb": kb_retriever_tool, "input": itemgetter("input"), "chat_history": itemgetter("chat_history")}
     )
-    agentExecutor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        return_intermediate_steps=True,
-        # return_intermediate_steps=False
-    ).with_config({"tags": ["execute-kb+docs-retriever-agent"], "metadata": {"user-email": username}})
 
-    return agentExecutor
+    chain = (
+        setup_and_retrieval
+        | prompt
+        | OpenAIManager.OPENAI_CHAT_PRIMARY
+        | output_parser
+    ).with_config({"tags": ["execute-kb+docs-retriever-agent"], "metadata": {"user-email": username}})
+    
+    return chain
 
 # SETUP KNOWLEDGE BASE CHAIN
-def construct_kb_chain(username):
-    # get consumer retriever
-    vectorstore = get_vector_store_instance(settings.PINECONE_KNOWLEDGE_BASE_INDEX, None)
-    
-    # get knowledge base retriever
-    # use doc names from kb db to cover edge cases for kb retriever
-    retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={'k': 3, 'fetch_k': 50})
-    retriever_tool = create_retriever_tool(
-        retriever,
-        "law_search",
-        "use this tool to get information about laws relevant to user's input"
-    )
-
-    tools = [retriever_tool]
-
-    retriever_prompt = ChatPromptTemplate.from_messages([
-        ('system', f"""You are a {AdminConfig.LLM_ROLE}. You should always use the provided tool to respond. {AdminConfig.LLM_PROMPT}"""),
+def construct_kb_chain(username, kb_retriever_tool):
+    prompt = ChatPromptTemplate.from_messages([
+        ('system', f"You are a {AdminConfig.LLM_ROLE}.\n{AdminConfig.LLM_PROMPT}." +
+        "\n\nYou should ALWAYS and ONLY reference the following cases and legal acts to support your answer:'''{laws_from_kb}'''"),
         MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad")
+        ("human", "{input}")
     ])
-
-    agent = create_openai_functions_agent(
-        llm=OpenAIManager.OPENAI_CHAT,
-        prompt=retriever_prompt,
-        tools=tools,
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ('system', f"You are a {AdminConfig.LLM_ROLE}. {AdminConfig.LLM_PROMPT}." +
+        "\n\nONLY use the provided relevant laws below to answer qestions." +
+        "\nRelevant Laws:\n'''{laws_from_kb}'''"),
+        MessagesPlaceholder(variable_name="chat_history"),
+        ("human", "{input}")
+    ])
+    
+    output_parser = StrOutputParser()
+    setup_and_retrieval = RunnableParallel(
+        {"laws_from_kb": kb_retriever_tool, "input": itemgetter("input"), "chat_history": itemgetter("chat_history")}
     )
-    agentExecutor = AgentExecutor(
-        agent=agent,
-        tools=tools,
-        verbose=True,
-        return_intermediate_steps=True
-        # return_intermediate_steps=False
-    ).with_config({"tags": ["execute-kb-retriever-agent"], "metadata": {"user-email": username}})
 
-    return agentExecutor
+    chain = (
+        setup_and_retrieval
+        | prompt
+        | OpenAIManager.OPENAI_CHAT_PRIMARY
+        | output_parser
+    ).with_config({"tags": ["execute-kb-retriever-agent"], "metadata": {"user-email": username}})
+    
+    return chain
+
+def __get_kb_retriever_tool(kb_doc_names, top_k):
+    vectorstore = get_vector_store_instance(settings.PINECONE_KNOWLEDGE_BASE_INDEX, None)
+    retriever = vectorstore.as_retriever(search_type="mmr", 
+                                         search_kwargs={
+                                             'k': top_k, 
+                                             'fetch_k': 50,
+                                             'filter': {"file_name": {"$in": kb_doc_names}}
+                                             })
+
+    template = """
+    You are an experienced lawyer and have access to knowledge base of cases and legal acts.
+    You have been tasked to output three keyword-based search queries to fetch relevant pieces of information from cases and legal acts.
+    Use the below conversation between a user and legal writer to generate the search queries.
+    
+    Conversation:'''{chat_history}'''
+
+    Latest Message:'''{input}'''
+    
+    Respond ONLY with three different search queries, each targeting a different angle.
+
+    Search Queries:"""
+
+    retriever_prompt = ChatPromptTemplate.from_template(template)
+
+    return create_history_aware_retriever(
+        llm=OpenAIManager.OPENAI_CHAT_SECONDARY,
+        retriever=retriever,
+        prompt=retriever_prompt
+    )
+
+def __get_consumer_retriever_tool(consumer_doc_names, top_k):
+    vectorstore = get_vector_store_instance(settings.PINECONE_CONSUMER_INDEX, None)
+    retriever = vectorstore.as_retriever(search_type = "mmr", 
+                                                  search_kwargs={
+                                                      'k': top_k, 
+                                                      'fetch_k': 50,
+                                                      'filter': {"file_name": {"$in": consumer_doc_names}}
+                                                     })
+    
+    template = """
+    You are an expert in generating keyword-based search queries to extract relevant sections from a document.
+    Your task is to analyse the on going conversation between the user and the assitant below and output three keyword-based search queries.
+    The search queries will be used to fetch relevant sections from the user's document.
+
+    Conversation:'''{chat_history}'''
+
+    Latest Message:'''{input}'''
+    
+    Respond ONLY with three different search queries, each targeting a different angle.
+
+    Search Queries:"""
+
+    retriever_prompt = ChatPromptTemplate.from_template(template)
+
+    return create_history_aware_retriever(
+        llm=OpenAIManager.OPENAI_CHAT_SECONDARY,
+        retriever=retriever,
+        prompt=retriever_prompt
+    )
 
 def get_suggested_questions_chain(username):
     template = """
@@ -127,7 +161,7 @@ def get_suggested_questions_chain(username):
     chain = (
         {"chat_history": itemgetter("chat_history")}
         | prompt
-        | OpenAIManager.OPENAI_CHAT
+        | OpenAIManager.OPENAI_CHAT_PRIMARY
         | StrOutputParser()
     ).with_config({"tags": ["execute-suggested-question-chain"], "metadata": {"user-email": username}})
 
