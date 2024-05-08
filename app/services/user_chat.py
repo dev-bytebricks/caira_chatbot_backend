@@ -3,7 +3,6 @@ import uuid
 from fastapi import HTTPException, status
 from app.schemas.requests.user_chat import Mode
 from app.common import getzep, langchain
-from langchain.agents import AgentExecutor
 
 async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
@@ -79,9 +78,7 @@ async def clear_chat_history(username):
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error occured while clearing chat history: {ex}")
 
-async def _stream_response(chain: AgentExecutor, user_msg, zep_chat_history):
+async def _stream_response(chain, user_msg, zep_chat_history):
     converted_history = getzep.convert_zep_messages_to_langchain(zep_chat_history)
-    async for chunk in chain.astream_events({"input": user_msg, "chat_history": converted_history}, version='v1'):
-        if chunk['event'] == 'on_chat_model_stream':
-            content = chunk['data']['chunk'].content
-            yield content
+    async for chunk in chain.astream({"input": user_msg, "chat_history": converted_history}):
+        yield chunk

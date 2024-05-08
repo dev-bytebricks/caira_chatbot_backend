@@ -72,7 +72,7 @@ def convert_zep_messages_to_langchain(conversation_from_zep):
     return langchain_chat_history
 
 def get_all_messages_by_session(session_id):
-    return zep_client.message.get_session_messages(session_id)
+    return zep_client.message.get_session_messages(session_id, limit=10, cursor=1)
     
 def add_message_to_session(session_id, role, msg_content):
     response = zep_client.memory.add_memory(session_id, Memory(messages=[Message(role=role, content=msg_content)]))
