@@ -33,7 +33,9 @@ def construct_kb_consumer_chain(username, consumer_retriever_tool, kb_retriever_
 
     prompt = ChatPromptTemplate.from_messages([
         ('system', f"You are a {AdminConfig.LLM_ROLE}.\n{AdminConfig.LLM_PROMPT}." +
-        # "Assume that the user is self representing. Therefore you must not recommend seeking legal advice. You must use British English spelling of words and not use the term custody because it's American. Bullet proof your answers where appropriate and ensure that sentences have max 10 words. Refrain from starting your sentences with given or remember.."
+        # ('system', f"You are a {AdminConfig.LLM_ROLE}." +
+        # "Assume that the user is self representing. Therefore you must not recommend seeking legal advice. You must use British English spelling of words and not use the term custody because it's American. Bullet proof your answers where appropriate and ensure that sentences have max 10 words. Refrain from starting your sentences with given or remember.." +
+        
         "\n\nYou should ALWAYS and ONLY reference the following cases and legal acts to support your answer:'''{laws_from_kb}'''" +
         "\n\nUser's Scenario:\n'''{user_scenario}'''"),
         MessagesPlaceholder(variable_name="chat_history"),
@@ -55,18 +57,13 @@ def construct_kb_consumer_chain(username, consumer_retriever_tool, kb_retriever_
     return chain
 
 # SETUP KNOWLEDGE BASE CHAIN
-def construct_kb_chain(username, kb_retriever_tool):
+def construct_kb_chain(username, kb_retriever_tool):    
     prompt = ChatPromptTemplate.from_messages([
         ('system', f"You are a {AdminConfig.LLM_ROLE}.\n{AdminConfig.LLM_PROMPT}." +
+        # ('system', f"You are a {AdminConfig.LLM_ROLE}." +
+        # "Assume that the user is self representing. Therefore you must not recommend seeking legal advice. You must use British English spelling of words and not use the term custody because it's American. Bullet proof your answers where appropriate and ensure that sentences have max 10 words. Refrain from starting your sentences with given or remember.." +
+        
         "\n\nYou should ALWAYS and ONLY reference the following cases and legal acts to support your answer:'''{laws_from_kb}'''"),
-        MessagesPlaceholder(variable_name="chat_history"),
-        ("human", "{input}")
-    ])
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ('system', f"You are a {AdminConfig.LLM_ROLE}. {AdminConfig.LLM_PROMPT}." +
-        "\n\nONLY use the provided relevant laws below to answer qestions." +
-        "\nRelevant Laws:\n'''{laws_from_kb}'''"),
         MessagesPlaceholder(variable_name="chat_history"),
         ("human", "{input}")
     ])
@@ -95,7 +92,7 @@ def __get_kb_retriever_tool(kb_doc_names, top_k):
                                              })
 
     template = """
-    You are an experienced lawyer and have access to knowledge base of cases and legal acts.
+    You are an experienced solicitor and have access to knowledge base of cases and legal acts.
     You have been tasked to output three keyword-based search queries to fetch relevant pieces of information from cases and legal acts.
     Use the below conversation between a user and legal writer to generate the search queries.
     
