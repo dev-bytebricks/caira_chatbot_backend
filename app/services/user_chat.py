@@ -1,3 +1,4 @@
+import asyncio
 import re
 import uuid
 from fastapi import HTTPException, status
@@ -8,12 +9,15 @@ from langchain.agents import AgentExecutor
 async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
     qa_chain = langchain.get_qa_chain(db_session, username)
-    ai_msg = ""
+    ai_msg=''
 
     if mode == Mode.NA:
-        async for content in _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history):
-            ai_msg += content
-            yield f"data: {content}\n\n"
+        async for chunk in qa_chain.astream_events({"input": user_msg, "chat_history": getzep.convert_zep_messages_to_langchain(chat_history)},version='v1'):
+            if chunk['event'] == 'on_chat_model_stream':
+                content = chunk['data']['chunk'].content
+                ai_msg = ai_msg + content 
+                yield f"{content}"   
+        
 
         if not traceless:
             await _add_message_to_chat_history(username, "User", user_msg)
@@ -35,9 +39,12 @@ async def get_ai_response(username, db_session, user_msg, traceless, mode):
         else:
             user_msg = f'''Please give me a legal precedent on your following response: "{latest_ai_response}"'''
         
-        async for content in _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history):
-            ai_msg += content
-            yield f"data: {content}\n\n" 
+        
+        async for chunk in qa_chain.astream_events({"input": user_msg, "chat_history": getzep.convert_zep_messages_to_langchain(chat_history)},version='v1'):
+            if chunk['event'] == 'on_chat_model_stream':
+                content = chunk['data']['chunk'].content
+                ai_msg = ai_msg + content 
+                yield f"{content}"   
 
         if not traceless:
             await _add_message_to_chat_history(username, "AI", ai_msg)

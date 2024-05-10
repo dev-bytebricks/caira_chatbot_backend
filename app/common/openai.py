@@ -24,4 +24,3 @@ class OpenAIManager:
 
 # setup openAIChat at startup
 OpenAIManager.update_openai_chat_instance()
-

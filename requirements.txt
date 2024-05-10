@@ -95,3 +95,4 @@ google-auth-oauthlib==1.2.0
 googleapis-common-protos==1.62.0
 pypdf2==3.0.1
 getfilelistpy==1.0.7
+stripe>=5.0.0

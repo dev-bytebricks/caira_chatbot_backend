@@ -20,7 +20,7 @@ def get_qa_chain(session: Session, username):
     return construct_kb_chain()
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
-def construct_kb_consumer_chain(username, consumer_doc_names):
+async def construct_kb_consumer_chain(username, consumer_doc_names):
     # get consumer retriever
     vectorstore = get_vector_store_instance(settings.PINECONE_CONSUMER_INDEX, None)
 
