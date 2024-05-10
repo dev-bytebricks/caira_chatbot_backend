@@ -4,8 +4,8 @@ import uuid
 from fastapi import HTTPException, status
 from app.common.security import delete_refresh_tokens_from_db, get_user_from_db, hash_password, is_password_strong_enough, verify_password
 from app.common import getzep, azurecloud
-from app.models.user import AdminConfig, User, Role
-from app.services import email
+from app.models.user import AdminConfig, User, Plan, Role
+from app.services import email, payment
 from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT
 
 logger = logging.getLogger(__name__)
@@ -42,12 +42,19 @@ async def create_user_account(data, session, background_tasks):
 
     # raise http exception if user is already registered in zep
     await _check_user_in_zep(data.email)
+    stripeId = await payment.create_customer(data)
+
+    if not stripeId: 
+        raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
 
     user = User()
     user.name = data.name
     user.email = data.email
     user.password = hash_password(data.password)
     user.role = data.role
+    user.paid = False
+    user.stripeId = stripeId
+    user.plan = Plan.free
     user.is_active = False
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)
@@ -57,6 +64,43 @@ async def create_user_account(data, session, background_tasks):
     # Account Verification Email
     await email.send_account_verification_email(user, background_tasks=background_tasks)
     return user
+
+async def update_user_payment(id, subscriptionId, session):
+    user = session.query(User).filter(User.id == id).first()
+
+    if not user:
+        raise HTTPException(status_code=400, detail="The user does not exist, make sure you have a logged in account before you pay.")
+
+    subscription_valid = payment.checkUserSubscription(subscriptionId)
+
+    if subscription_valid: 
+        user.paid = True
+    else:
+        user.paid = False
+        raise HTTPException(status_code=400, detail="The subscription hasn't been activated yet")
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+async def cancel_user_subscription(customerId, session):
+    # user = session.query(User).filter(User.id == id).first()
+
+    # if not user:
+    #     raise HTTPException(status_code=400, detail="The user does not exist, make sure you have a logged in account before you pay.")
+
+    userId = await payment.getUserId(customerId)
+
+    # if subscription_valid: 
+    #     user.paid = True
+    # else:
+    #     user.paid = False
+    #     raise HTTPException(status_code=400, detail="The subscription hasn't been activated yet")
+
+    # session.add(user)
+    # session.commit()
+    # session.refresh(user)
+    
 
 async def activate_user_account(data, session, background_tasks):
     

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Query, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.common.database import get_session
@@ -15,9 +15,7 @@ user_chat_router_protected = APIRouter(
     dependencies=[Depends(oauth2_scheme), Depends(validate_access_token)]
 )
 
-# check if user has uploaded any document to use the retriever chain. (store the status of document uploaded in db)
-# users/chat/send-msg -> Post Request, Request body: Mode: 0, User-Msg: "xyz", Traceless: False, Response: ai response, Traceless: False
-# The modes will be stored in form of enums (0 - N/A, 1 - Simplify, 2 - Elaborate, 3 - Get Legal Precedent)
+
 @user_chat_router_protected.post("/send-msg", status_code=status.HTTP_200_OK, response_model=AiResponse)
 async def get_ai_response(data: AiRequest, username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
     #return await user_chat.get_ai_response(username, session, data.user_msg, data.traceless, data.mode)
@@ -42,6 +40,5 @@ async def get_suggested_questions(username: str = Depends(validate_access_token)
 async def clear_chat_history(username: str = Depends(validate_access_token)):
     await user_chat.clear_chat_history(username)
     return JSONResponse({"message": "Your chat history has been cleared."})
-
 
 

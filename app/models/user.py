@@ -8,11 +8,20 @@ class Role(enum.Enum):
     User = 0
     Admin = 1
 
+class Plan(enum.Enum):
+    free = "Free"
+    one_month = "One Month"
+    three_month = "Three Month"
+    six_month = "Six Month"
+
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(150))
     email = Column(String(255), unique=True, index=True)
+    paid = Column(Boolean, default=False)
+    plan = Column(Enum(Plan), nullable=True, default= Plan.free)
+    stripeId = Column(String(200), nullable=True, default='')
     password = Column(String(100))
     is_active = Column(Boolean, default=False)
     role = Column(Enum(Role), nullable=False)
@@ -61,6 +70,7 @@ class AdminConfig(Base):
     llm_streaming = Column(Boolean, nullable=False, default=True)
     llm_prompt = Column(Text, nullable=False, default=None)
     llm_role = Column(String(100), nullable=False, default=None)
+    llm_streaming = Column(Boolean, nullable=False, default=True)
     greeting_message = Column(String(250), nullable=False, default=None)
     disclaimers = Column(String(500), nullable=False, default=None)
     gdrive_enabled = Column(Boolean, nullable=False, default=False)

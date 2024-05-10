@@ -3,11 +3,20 @@ from .common import logging_config
 
 logging_config.setup_logging()
 
-from app.routes import auth, user, user_chat, user_document, admin_config, admin_knowledge_base
+from app.routes import auth, user, user_chat, user_document, admin_config, admin_knowledge_base, payment, stripe
+from fastapi.middleware.cors import CORSMiddleware
+# List of allowed origins (i.e., the frontend URLs that you want to allow to connect to your API)
+origins = [
+    "http://localhost:3000",  # Adjust the port if your React app runs on a different port
+    "http://localhost:8001",  # The default port for FastAPI, if you want to allow it
+    # Add any other origins you want to allow
+]
 
 def create_application():
     application = FastAPI()
     application.include_router(user.user_router)
+    application.include_router(payment.payments_router_protected)
+    application.include_router(stripe.stripe_router)
     application.include_router(user.user_router_protected)
     application.include_router(user_chat.user_chat_router_protected)
     application.include_router(user_document.user_document_router_protected)
@@ -18,6 +27,15 @@ def create_application():
 
 app = create_application()
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Allows specified origins to make requests
+    allow_credentials=True,  # Allows cookies to be included in cross-origin HTTP requests
+    allow_methods=["*"],  # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allows all headers
+)
+
 @app.get("/")
 async def root():
-    return {"message": "Caira V2 is live."}
+    return {"message": "Caira V2 is live"}
