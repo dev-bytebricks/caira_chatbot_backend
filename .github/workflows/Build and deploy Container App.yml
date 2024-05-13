@@ -24,5 +24,5 @@ jobs:
           dockerfilePath: Dockerfile.cloud
           containerAppName: fastapi-app
           acrName: gdrivechatbot
-          imageToBuild: gdrivechatbot.azurecr.io/fastapi:latest
+          imageToBuild: gdrivechatbot.azurecr.io/cairav2-backend:latest-${{ github.sha }}
           resourceGroup: chatbot
