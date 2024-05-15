@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 import uuid
 from fastapi import HTTPException, status
 from app.common.security import delete_refresh_tokens_from_db, get_user_from_db, hash_password, is_password_strong_enough, verify_password
 from app.common import getzep, azurecloud
-from app.models.user import AdminConfig, User, Role
-from app.services import email
+from app.models.user import AdminConfig, User, Plan, Role
+from app.services import email, payment
 from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT
 
 logger = logging.getLogger(__name__)
@@ -58,6 +58,25 @@ async def create_user_account(data, session, background_tasks):
     await email.send_account_verification_email(user, background_tasks=background_tasks)
     return user
 
+async def update_user_payment(customerId, subscriptionId, session):
+    user = session.query(User).filter(User.stripeId == customerId).first()
+
+    if not user:
+        raise HTTPException(status_code=400, detail="The user does not exist!")
+    
+    subscription = await payment.checkSubscriptionStatus(subscriptionId)
+
+    if subscription.status: 
+        user.paid = True
+        user.plan = subscription.plan
+    else:
+        user.paid = False
+        user.plan = subscription.plan
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)    
+
 async def activate_user_account(data, session, background_tasks):
     
     user = session.query(User).filter(User.email == data.email).first()
@@ -79,6 +98,15 @@ async def activate_user_account(data, session, background_tasks):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="This link either expired or not valid.")
     
+    if user.role == Role.User:
+        stripeId = await payment.create_customer(user)
+        if not stripeId:
+            raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
+        user.paid = False
+        user.stripeId = stripeId
+        user.plan = Plan.free.value
+        user.trial_expiry = datetime.now(timezone.utc) + timedelta(days=7)    
+
     user.is_active = True
     user.updated_at = datetime.now(timezone.utc)
     user.verified_at = datetime.now(timezone.utc)
@@ -160,3 +188,21 @@ async def generate_pubsub_client_token(user: User):
     else:
         token = await azurecloud.get_pubsub_client_token(user.email)
     return {"token": token}
+
+async def delete_user(username, session):
+    zep_session_id = _get_zep_session_id_by_username(username)
+    try:
+        await getzep.delete_session(zep_session_id)
+        await getzep.delete_user(username)
+        session.query(User).filter(User.email == username).delete(synchronize_session='fetch')
+        session.commit()
+    except Exception as ex:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                            detail=f"Error occured while deleting user: {ex}")
+
+async def _get_zep_session_id_by_username(username):
+    user_all_sessions = await getzep.get_all_sessions_of_user(username)
+    if len(user_all_sessions) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No Zep session found")
+    session_id = user_all_sessions[0].session_id
+    return session_id

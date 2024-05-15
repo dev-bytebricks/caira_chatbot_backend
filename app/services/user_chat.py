@@ -8,7 +8,7 @@ async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
     chat_history = chat_history[-10:]
     qa_chain = langchain.get_qa_chain(db_session, username)
-    ai_msg = ""
+    ai_msg=''
 
     if mode == Mode.NA:
         async for content in _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history):

@@ -47,6 +47,11 @@ async def verify_user(data: VerifyUserRequest, background_tasks: BackgroundTasks
 async def fetch_user(user = Depends(get_current_user)):
     return user
 
+@user_router_protected.delete("/delete", status_code=status.HTTP_200_OK)
+async def delete_user(username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
+    await user.delete_user(username, session)
+    return JSONResponse({"message": "Account has been deleted successfully."})
+
 @user_router_protected.get("/app-info", status_code=status.HTTP_200_OK, response_model=AppInfoResponse)
 async def fetch_app_info(session: Session = Depends(get_session)):
     return await user.fetch_app_info(session)
