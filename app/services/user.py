@@ -64,7 +64,7 @@ async def update_user_payment(customerId, subscriptionId, session):
     if not user:
         raise HTTPException(status_code=400, detail="The user does not exist!")
     
-    subscription = payment.checkSubscriptionStatus(subscriptionId)
+    subscription = await payment.checkSubscriptionStatus(subscriptionId)
 
     if subscription.status: 
         user.paid = True
@@ -97,16 +97,16 @@ async def activate_user_account(data, session, background_tasks):
     if not token_valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="This link either expired or not valid.")
-    if not user.role == 1:
+    
+    if user.role == Role.User:
         stripeId = await payment.create_customer(user)
-        if not stripeId: 
+        if not stripeId:
             raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
         user.paid = False
         user.stripeId = stripeId
         user.plan = Plan.free
         user.trial_expiry = datetime.now(timezone.utc) + timedelta(days=7)    
 
-    
     user.is_active = True
     user.updated_at = datetime.now(timezone.utc)
     user.verified_at = datetime.now(timezone.utc)

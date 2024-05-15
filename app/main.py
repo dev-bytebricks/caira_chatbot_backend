@@ -4,11 +4,15 @@ from .common import logging_config
 logging_config.setup_logging()
 
 from app.routes import auth, user, user_chat, user_document, admin_config, admin_knowledge_base, payment, stripe
+from app.common.settings import get_settings
 from fastapi.middleware.cors import CORSMiddleware
+
+settings = get_settings()
+
 # List of allowed origins (i.e., the frontend URLs that you want to allow to connect to your API)
 origins = [
     "http://localhost:3000",  # Adjust the port if your React app runs on a different port
-    "http://localhost:8001",  # The default port for FastAPI, if you want to allow it
+    settings.FRONTEND_HOST,  # The default port for FastAPI, if you want to allow it
     # Add any other origins you want to allow
 ]
 

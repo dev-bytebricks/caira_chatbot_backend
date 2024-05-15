@@ -1,13 +1,7 @@
-import json
-import os
-from fastapi import FastAPI, Form, Request, HTTPException, APIRouter, Depends
-from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
+from fastapi import HTTPException, APIRouter, Depends
 from app.common.security import oauth2_scheme, validate_access_token
 from app.common.settings import get_settings
-from fastapi.staticfiles import StaticFiles
 from stripe import StripeError, stripe
-from sqlalchemy.orm import Session
-from app.common.database import get_session
 from app.services import payment
 from app.common.security import get_current_user
 from app.models.user import User
@@ -15,8 +9,6 @@ from app.models.user import User
 settings = get_settings()
 # This is your test secret API key.
 stripe.api_key = settings.STRIPE_SECRET_KEY
-
-YOUR_DOMAIN = 'https://dev0106.unwildered.co.uk/'
 
 payments_router_protected = APIRouter(
     prefix="/payment",

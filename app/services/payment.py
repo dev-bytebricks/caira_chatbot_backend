@@ -1,8 +1,8 @@
 from app.common.settings import get_settings
 import stripe
-from stripe import Subscription, Customer, CustomerSession
+from stripe import Subscription
 import logging
-from fastapi import FastAPI, Form, Request, HTTPException, APIRouter, Depends
+from fastapi import HTTPException
 from app.models.user import User
 from pydantic import BaseModel
 
