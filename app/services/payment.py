@@ -3,7 +3,7 @@ import stripe
 from stripe import Subscription
 import logging
 from fastapi import HTTPException
-from app.models.user import User
+from app.models.user import Plan, User
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ async def checkSubscriptionStatus(subscriptionId):
             print("Updating plan", plan)
             return SubscriptionStatus(plan=plan, status=True)
         else:
-            return SubscriptionStatus(plan="free", status=False)
+            return SubscriptionStatus(plan=Plan.free.value, status=False)
     else:
         raise HTTPException(status_code=400, detail="Subscription was not found")
 

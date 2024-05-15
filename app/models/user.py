@@ -20,7 +20,7 @@ class User(Base):
     name = Column(String(150))
     email = Column(String(255), unique=True, index=True)
     paid = Column(Boolean, default=False)
-    plan = Column(String(200), default= "free")
+    plan = Column(String(200), default=Plan.free.value)
     stripeId = Column(String(200), nullable=True, default='')
     password = Column(String(100))
     is_active = Column(Boolean, default=False)

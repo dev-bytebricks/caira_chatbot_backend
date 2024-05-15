@@ -104,7 +104,7 @@ async def activate_user_account(data, session, background_tasks):
             raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
         user.paid = False
         user.stripeId = stripeId
-        user.plan = Plan.free
+        user.plan = Plan.free.value
         user.trial_expiry = datetime.now(timezone.utc) + timedelta(days=7)    
 
     user.is_active = True
@@ -188,3 +188,21 @@ async def generate_pubsub_client_token(user: User):
     else:
         token = await azurecloud.get_pubsub_client_token(user.email)
     return {"token": token}
+
+async def delete_user(username, session):
+    zep_session_id = _get_zep_session_id_by_username(username)
+    try:
+        await getzep.delete_session(zep_session_id)
+        await getzep.delete_user(username)
+        session.query(User).filter(User.email == username).delete(synchronize_session='fetch')
+        session.commit()
+    except Exception as ex:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                            detail=f"Error occured while deleting user: {ex}")
+
+async def _get_zep_session_id_by_username(username):
+    user_all_sessions = await getzep.get_all_sessions_of_user(username)
+    if len(user_all_sessions) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No Zep session found")
+    session_id = user_all_sessions[0].session_id
+    return session_id
