@@ -18,7 +18,7 @@ class SubscriptionStatus(BaseModel):
 async def create_customer(user: User):
     try:
         # Create a new customer in Stripe
-        stripe_customer = stripe.Customer.create(
+        stripe_customer = await stripe.Customer.create_async(
             email=user.email,
             name=user.name,
             description="Customer for {}".format(user.email),
@@ -30,8 +30,8 @@ async def create_customer(user: User):
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-def checkSubscriptionStatus(subscriptionId): 
-    subscription = Subscription.retrieve(id=subscriptionId, expand= ['items.data.price.product'])
+async def checkSubscriptionStatus(subscriptionId): 
+    subscription = await Subscription.retrieve_async(id=subscriptionId, expand= ['items.data.price.product'])
     
     if(subscription):
         status = subscription["status"]
@@ -46,10 +46,10 @@ def checkSubscriptionStatus(subscriptionId):
     else:
         raise HTTPException(status_code=400, detail="Subscription was not found")
 
-def create_checkout_session(userId, customer_id, price_id):
+async def create_checkout_session(userId, customer_id, price_id):
     try:
         # Attempt to create a checkout session
-        session = stripe.checkout.Session.create(
+        session = await stripe.checkout.Session.create_async(
             customer=customer_id,
             payment_method_types=['card'],  # Add or remove as per your requirement
             line_items=[{
@@ -58,8 +58,8 @@ def create_checkout_session(userId, customer_id, price_id):
             }],
             client_reference_id= userId,
             mode='subscription',
-            success_url='http://localhost:3000/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url='http://localhost:3000/cancel',
+            success_url= settings.FRONTEND_HOST,
+            cancel_url= settings.FRONTEND_HOST,
         )
         # Check if the session is successfully created
         if not session:
@@ -73,9 +73,5 @@ def create_checkout_session(userId, customer_id, price_id):
         # Handle other generic exceptions if needed
         print(f"An error occurred: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred")
-
-
-def getUserId(customerId):
-    user = Customer.retrieve(id=customerId)
 
             

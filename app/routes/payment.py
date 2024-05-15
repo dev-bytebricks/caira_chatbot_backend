@@ -28,9 +28,9 @@ payments_router_protected = APIRouter(
 @payments_router_protected.post("/create-portal-session")
 async def customer_portal(user: User = Depends(get_current_user)):
     try:
-        return_url = "https://dev0106.unwildered.co.uk"
+        return_url = settings.FRONTEND_HOST
 
-        portalSession = stripe.billing_portal.Session.create(
+        portalSession = await stripe.billing_portal.Session.create_async(
             customer=user.stripeId,
             return_url=return_url,
         )
@@ -42,7 +42,7 @@ async def customer_portal(user: User = Depends(get_current_user)):
 @payments_router_protected.get("/prices")
 async def get_prices():
     try:
-        prices = stripe.Price.list(active=True, expand=['data.product'])
+        prices = await stripe.Price.list_async(active=True, expand=['data.product'])
         return {"prices": prices.data}
     except StripeError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -54,7 +54,7 @@ async def create_payment_session(priceId: str, user: User = Depends(get_current_
     try:
         if not user.stripeId:
             raise HTTPException(status_code=400, detail="Stripe ID not found")
-        client_secret = payment.create_checkout_session(user.id, user.stripeId, priceId)
+        client_secret = await payment.create_checkout_session(user.id, user.stripeId, priceId)
         return client_secret
     except HTTPException as http_exc:
         # This will handle our custom raised HTTPExceptions

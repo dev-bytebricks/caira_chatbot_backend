@@ -88,14 +88,6 @@ async def activate_user_account(data, session, background_tasks):
     # form user token
     user_token = user.get_context_string(context=USER_VERIFY_ACCOUNT)
 
-    if not user.role == 1:
-        stripeId = await payment.create_customer(user)
-        if not stripeId: 
-            raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
-        user.paid = False
-        user.stripeId = stripeId
-        user.plan = Plan.free
-        user.trial_expiry = datetime.now(timezone.utc) + timedelta(days=7)
     # compare tokens (checks if token points to the intended account)
     try:
         token_valid = verify_password(user_token, data.token)
@@ -105,6 +97,15 @@ async def activate_user_account(data, session, background_tasks):
     if not token_valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail="This link either expired or not valid.")
+    if not user.role == 1:
+        stripeId = await payment.create_customer(user)
+        if not stripeId: 
+            raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
+        user.paid = False
+        user.stripeId = stripeId
+        user.plan = Plan.free
+        user.trial_expiry = datetime.now(timezone.utc) + timedelta(days=7)    
+
     
     user.is_active = True
     user.updated_at = datetime.now(timezone.utc)
