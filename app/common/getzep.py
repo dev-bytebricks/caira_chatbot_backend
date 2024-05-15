@@ -10,21 +10,21 @@ settings = get_settings()
 
 zep_client = ZepClient(settings.ZEP_API_URL)
 
-def get_all_users():
-    return zep_client.user.list(limit=1000, cursor=0)
+async def get_all_users():
+    return await zep_client.user.alist(limit=1000, cursor=0)
 
-def delete_user(user_id):
-    zep_client.user.delete(user_id)
+async def delete_user(user_id):
+    await zep_client.user.adelete(user_id)
 
-def check_user_exists(user_id):
+async def check_user_exists(user_id):
     try:
-        if zep_client.user.get(user_id):
+        if await zep_client.user.aget(user_id):
             return True
         return False
     except zep_exceptions.NotFoundError:
         return False
 
-def add_new_user(user_id, emailid, full_name):
+async def add_new_user(user_id, emailid, full_name):
     user_request = CreateUserRequest(
         user_id=user_id,
         email=emailid,
@@ -32,34 +32,34 @@ def add_new_user(user_id, emailid, full_name):
         last_name="",
         metadata={"created_timestamp": str(datetime.datetime.now())}
     )
-    zep_client.user.add(user_request)
+    await zep_client.user.aadd(user_request)
     print(f'user with id {user_id} created in zep')
 
-def get_all_sessions():
-    return zep_client.memory.list_sessions(limit=1000, cursor=0)
+async def get_all_sessions():
+    return await zep_client.memory.alist_sessions(limit=1000, cursor=0)
 
-def get_all_sessions_of_user(user_id):
-    return zep_client.user.get_sessions(user_id)
+async def get_all_sessions_of_user(user_id):
+    return await zep_client.user.aget_sessions(user_id)
 
-def add_session(user_id, sessionid):
+async def add_session(user_id, sessionid):
     session = Session(
         session_id=sessionid,
         user_id=user_id,
         metadata={"created_timestamp": str(datetime.datetime.now())}
         )
-    zep_client.memory.add_session(session)
+    await zep_client.memory.aadd_session(session)
     print(f'session for user {user_id} created in zep')
 
-def retrieve_zep_memory(session_id):
+async def retrieve_zep_memory(session_id):
     messages_list = []
-    memory = zep_client.memory.get_memory(session_id)
+    memory = await zep_client.memory.aget_memory(session_id)
     for message in memory.messages:
         messages_list.append({"role":message.role, "content":message.content})
     return messages_list
 
-def delete_session(session_id):
+async def delete_session(session_id):
     print(f'deleting session from zep, session_id: {session_id}')
-    print(zep_client.memory.delete_memory(session_id))
+    print(await zep_client.memory.adelete_memory(session_id))
     print(f'session deleted from zep, session_id: {session_id}')
 
 def convert_zep_messages_to_langchain(conversation_from_zep):
@@ -71,9 +71,9 @@ def convert_zep_messages_to_langchain(conversation_from_zep):
             langchain_chat_history.append(AIMessage(content=message.content))
     return langchain_chat_history
 
-def get_all_messages_by_session(session_id):
-    return zep_client.message.get_session_messages(session_id, limit=10, cursor=1)
+async def get_all_messages_by_session(session_id):
+    return await zep_client.message.aget_session_messages(session_id, limit=1000)
     
-def add_message_to_session(session_id, role, msg_content):
-    response = zep_client.memory.add_memory(session_id, Memory(messages=[Message(role=role, content=msg_content)]))
+async def add_message_to_session(session_id, role, msg_content):
+    response = await zep_client.memory.aadd_memory(session_id, Memory(messages=[Message(role=role, content=msg_content)]))
     print(f"chatbot response added to zep: {response}")

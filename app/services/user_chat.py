@@ -6,6 +6,7 @@ from app.common import getzep, langchain
 
 async def get_ai_response(username, db_session, user_msg, traceless, mode):
     chat_history = await get_chat_history(username)
+    chat_history = chat_history[-10:]
     qa_chain = langchain.get_qa_chain(db_session, username)
     ai_msg=''
 
@@ -42,7 +43,7 @@ async def get_ai_response(username, db_session, user_msg, traceless, mode):
             await _add_message_to_chat_history(username, "AI", ai_msg)
 
 async def _get_zep_session_id_by_username(username):
-    user_all_sessions = getzep.get_all_sessions_of_user(username)
+    user_all_sessions = await getzep.get_all_sessions_of_user(username)
     if len(user_all_sessions) == 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No Zep session found")
     session_id = user_all_sessions[0].session_id
@@ -50,11 +51,11 @@ async def _get_zep_session_id_by_username(username):
 
 async def _add_message_to_chat_history(username, role, msg_content):
     session_id = await _get_zep_session_id_by_username(username)
-    getzep.add_message_to_session(session_id, role, msg_content)
+    await getzep.add_message_to_session(session_id, role, msg_content)
 
 async def get_chat_history(username):
     session_id = await _get_zep_session_id_by_username(username)
-    return getzep.get_all_messages_by_session(session_id)
+    return await getzep.get_all_messages_by_session(session_id)
 
 async def get_suggested_questions(username):
 
@@ -73,8 +74,8 @@ async def get_suggested_questions(username):
 async def clear_chat_history(username):
     session_id = await _get_zep_session_id_by_username(username)
     try:
-        getzep.delete_session(session_id)
-        getzep.add_session(user_id=username, sessionid=uuid.uuid4().hex)
+        await getzep.delete_session(session_id)
+        await getzep.add_session(user_id=username, sessionid=uuid.uuid4().hex)
     except Exception as ex:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Error occured while clearing chat history: {ex}")
 
