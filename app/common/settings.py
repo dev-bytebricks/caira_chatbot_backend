@@ -16,6 +16,7 @@ class Settings(BaseSettings):
         # Stripe Config
     STRIPE_PUBLIC_KEY: str
     STRIPE_SECRET_KEY: str
+    STRIPE_WEBHOOK_SECRET: str
 
     # MySQL Database Config
     MYSQL_HOST: str

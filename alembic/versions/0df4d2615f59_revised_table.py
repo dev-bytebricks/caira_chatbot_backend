@@ -1,18 +1,18 @@
-"""create my table table
+"""revised_table
 
-Revision ID: d4c9e7f6f9b3
+Revision ID: 0df4d2615f59
 Revises: 
-Create Date: 2024-03-23 10:16:56.793379
+Create Date: 2024-05-10 09:59:37.082884
 
 """
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
-
+from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision: str = 'd4c9e7f6f9b3'
+revision: str = '0df4d2615f59'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,55 +24,68 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('llm_model_name', sa.String(length=250), nullable=False),
     sa.Column('llm_temperature', sa.Numeric(precision=2, scale=2), nullable=False),
-    sa.Column('llm_prompt', sa.String(length=250), nullable=False),
+    sa.Column('llm_streaming', sa.Boolean(), nullable=False),
+    sa.Column('llm_prompt', sa.Text(), nullable=False),
     sa.Column('llm_role', sa.String(length=100), nullable=False),
     sa.Column('greeting_message', sa.String(length=250), nullable=False),
     sa.Column('disclaimers', sa.String(length=500), nullable=False),
     sa.Column('gdrive_enabled', sa.Boolean(), nullable=False),
     sa.Column('logo_link', sa.String(length=250), nullable=False),
-    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', mysql.DATETIME(fsp=3), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_admin_config_llm_model_name'), 'admin_config', ['llm_model_name'], unique=False)
     op.create_table('knowledgebase_documents',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('document_name', sa.String(length=250), nullable=True),
+    sa.Column('document_name', sa.String(length=250, collation='utf8mb3_bin'), nullable=True),
     sa.Column('content_type', sa.String(length=250), nullable=True),
-    sa.Column('uploaded_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('status', sa.String(length=100), nullable=True),
+    sa.Column('updated_at', mysql.DATETIME(fsp=3), nullable=True),
+    sa.Column('created_at', mysql.DATETIME(fsp=3), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index('idx_document_name_status', 'knowledgebase_documents', ['document_name', 'status'], unique=False)
     op.create_index(op.f('ix_knowledgebase_documents_content_type'), 'knowledgebase_documents', ['content_type'], unique=False)
     op.create_index(op.f('ix_knowledgebase_documents_document_name'), 'knowledgebase_documents', ['document_name'], unique=False)
+    op.create_index(op.f('ix_knowledgebase_documents_status'), 'knowledgebase_documents', ['status'], unique=False)
     op.create_table('users',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('name', sa.String(length=150), nullable=True),
     sa.Column('email', sa.String(length=255), nullable=True),
+    sa.Column('paid', sa.Boolean(), nullable=True),
+    sa.Column('plan', sa.Enum('free', 'one_month', 'three_month', 'six_month', name='plan'), nullable=True),
+    sa.Column('stripeId', sa.String(length=200), nullable=True),
     sa.Column('password', sa.String(length=100), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
     sa.Column('role', sa.Enum('User', 'Admin', name='role'), nullable=False),
-    sa.Column('verified_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('verified_at', mysql.DATETIME(fsp=3), nullable=True),
+    sa.Column('updated_at', mysql.DATETIME(fsp=3), nullable=True),
+    sa.Column('created_at', mysql.DATETIME(fsp=3), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_table('user_documents',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.String(length=255), nullable=True),
-    sa.Column('document_name', sa.String(length=250), nullable=True),
+    sa.Column('document_name', sa.String(length=250, collation='utf8mb3_bin'), nullable=True),
     sa.Column('content_type', sa.String(length=250), nullable=True),
-    sa.Column('uploaded_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
+    sa.Column('status', sa.String(length=100), nullable=True),
+    sa.Column('updated_at', mysql.DATETIME(fsp=3), nullable=True),
+    sa.Column('created_at', mysql.DATETIME(fsp=3), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.email'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index('idx_user_id_document_name', 'user_documents', ['user_id', 'document_name'], unique=False)
+    op.create_index('idx_user_id_document_name_status', 'user_documents', ['user_id', 'document_name', 'status'], unique=False)
     op.create_index(op.f('ix_user_documents_content_type'), 'user_documents', ['content_type'], unique=False)
     op.create_index(op.f('ix_user_documents_document_name'), 'user_documents', ['document_name'], unique=False)
+    op.create_index(op.f('ix_user_documents_status'), 'user_documents', ['status'], unique=False)
     op.create_table('user_tokens',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('user_id', sa.String(length=255), nullable=True),
     sa.Column('refresh_token', sa.String(length=250), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('expires_at', sa.DateTime(), nullable=False),
+    sa.Column('created_at', mysql.DATETIME(fsp=3), nullable=False),
+    sa.Column('expires_at', mysql.DATETIME(fsp=3), nullable=False),
     sa.ForeignKeyConstraint(['user_id'], ['users.email'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -84,13 +97,18 @@ def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
     op.drop_index(op.f('ix_user_tokens_refresh_token'), table_name='user_tokens')
     op.drop_table('user_tokens')
+    op.drop_index(op.f('ix_user_documents_status'), table_name='user_documents')
     op.drop_index(op.f('ix_user_documents_document_name'), table_name='user_documents')
     op.drop_index(op.f('ix_user_documents_content_type'), table_name='user_documents')
+    op.drop_index('idx_user_id_document_name_status', table_name='user_documents')
+    op.drop_index('idx_user_id_document_name', table_name='user_documents')
     op.drop_table('user_documents')
     op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
+    op.drop_index(op.f('ix_knowledgebase_documents_status'), table_name='knowledgebase_documents')
     op.drop_index(op.f('ix_knowledgebase_documents_document_name'), table_name='knowledgebase_documents')
     op.drop_index(op.f('ix_knowledgebase_documents_content_type'), table_name='knowledgebase_documents')
+    op.drop_index('idx_document_name_status', table_name='knowledgebase_documents')
     op.drop_table('knowledgebase_documents')
     op.drop_index(op.f('ix_admin_config_llm_model_name'), table_name='admin_config')
     op.drop_table('admin_config')

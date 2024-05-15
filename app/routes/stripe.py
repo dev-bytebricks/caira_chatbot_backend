@@ -2,18 +2,20 @@ import json
 import os
 from fastapi import FastAPI, Form, Request, HTTPException, APIRouter, Depends
 from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
+import stripe.webhook
 from app.common.security import oauth2_scheme, validate_access_token
 from app.common.settings import get_settings
 from fastapi.staticfiles import StaticFiles
 import stripe
 from sqlalchemy.orm import Session
 from app.common.database import get_session
-from app.services.user import update_user_payment, cancel_user_subscription
+from app.services.user import update_user_payment
 from app.services import payment
 
 settings = get_settings()
 # This is your test secret API key.
 stripe.api_key = settings.STRIPE_SECRET_KEY
+webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
 YOUR_DOMAIN = 'https://dev0106.unwildered.co.uk/'
 
@@ -25,8 +27,7 @@ stripe_router = APIRouter(
 )
 
 @stripe_router.post("/webhook")
-async def webhook_received(request: Request, session: Session = Depends(get_session)):
-    webhook_secret = 'whsec_11a4f60f6c00343788fc0307ddc74aa8c98044ab0b2aacec1a36d9a86516ebf9'
+async def webhook_received(request: Request, session: Session = Depends(get_session)):   #Can we use session effectively on a webhook for each user?
     request_data = await request.json()
 
     if webhook_secret:
@@ -49,18 +50,19 @@ async def webhook_received(request: Request, session: Session = Depends(get_sess
     data_object = data['object']
     # Handle the event accordingly
 
-    if event_type == 'checkout.session.completed':
-        if data_object["client_reference_id"]:
-            subscription_id = data_object["subscription"]
-            client_reference_id = data_object["client_reference_id"]
+    if event_type == 'customer.subscription.updated':
+        if data_object["customer"]:
+            subscription_id = data_object["id"]
+            customer_id = data_object["customer"]
 
-            await update_user_payment(client_reference_id, subscription_id, session)
+            await update_user_payment(customer_id, subscription_id, session)
 
     if event_type == 'customer.subscription.deleted':
         if data_object["status"] == "canceled":
             customer_id = data_object["customer"]
+            subscription_id = data_object["id"]
 
-            await cancel_user_subscription(customer_id)
+            await update_user_payment(customer_id, subscription_id, session)
          
     # Handle other events...
 

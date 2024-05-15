@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import logging
 import uuid
 from fastapi import HTTPException, status
@@ -42,19 +42,12 @@ async def create_user_account(data, session, background_tasks):
 
     # raise http exception if user is already registered in zep
     await _check_user_in_zep(data.email)
-    stripeId = await payment.create_customer(data)
-
-    if not stripeId: 
-        raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
 
     user = User()
     user.name = data.name
     user.email = data.email
     user.password = hash_password(data.password)
     user.role = data.role
-    user.paid = False
-    user.stripeId = stripeId
-    user.plan = Plan.free
     user.is_active = False
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)
@@ -65,42 +58,24 @@ async def create_user_account(data, session, background_tasks):
     await email.send_account_verification_email(user, background_tasks=background_tasks)
     return user
 
-async def update_user_payment(id, subscriptionId, session):
-    user = session.query(User).filter(User.id == id).first()
+async def update_user_payment(customerId, subscriptionId, session):
+    user = session.query(User).filter(User.stripeId == customerId).first()
 
     if not user:
-        raise HTTPException(status_code=400, detail="The user does not exist, make sure you have a logged in account before you pay.")
+        raise HTTPException(status_code=400, detail="The user does not exist!")
+    
+    subscription = payment.checkSubscriptionStatus(subscriptionId)
 
-    subscription_valid = payment.checkUserSubscription(subscriptionId)
-
-    if subscription_valid: 
+    if subscription.status: 
         user.paid = True
+        user.plan = subscription.plan
     else:
         user.paid = False
-        raise HTTPException(status_code=400, detail="The subscription hasn't been activated yet")
+        user.plan = subscription.plan
 
     session.add(user)
     session.commit()
-    session.refresh(user)
-
-async def cancel_user_subscription(customerId, session):
-    # user = session.query(User).filter(User.id == id).first()
-
-    # if not user:
-    #     raise HTTPException(status_code=400, detail="The user does not exist, make sure you have a logged in account before you pay.")
-
-    userId = await payment.getUserId(customerId)
-
-    # if subscription_valid: 
-    #     user.paid = True
-    # else:
-    #     user.paid = False
-    #     raise HTTPException(status_code=400, detail="The subscription hasn't been activated yet")
-
-    # session.add(user)
-    # session.commit()
-    # session.refresh(user)
-    
+    session.refresh(user)    
 
 async def activate_user_account(data, session, background_tasks):
     
@@ -113,6 +88,14 @@ async def activate_user_account(data, session, background_tasks):
     # form user token
     user_token = user.get_context_string(context=USER_VERIFY_ACCOUNT)
 
+    if not user.role == 1:
+        stripeId = await payment.create_customer(user)
+        if not stripeId: 
+            raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
+        user.paid = False
+        user.stripeId = stripeId
+        user.plan = Plan.free
+        user.trial_expiry = datetime.now(timezone.utc) + timedelta(days=7)
     # compare tokens (checks if token points to the intended account)
     try:
         token_valid = verify_password(user_token, data.token)
