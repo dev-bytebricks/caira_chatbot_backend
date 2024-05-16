@@ -12,7 +12,8 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 settings = get_settings()
 
 # Configure Azure monitor collection telemetry pipeline
-configure_azure_monitor(connection_string=settings.AZURE_APP_INSIGHTS_CONN_STRING)
+if settings.AZURE_APP_INSIGHTS_CONN_STRING:
+    configure_azure_monitor(connection_string=settings.AZURE_APP_INSIGHTS_CONN_STRING)
 
 # List of allowed origins (i.e., the frontend URLs that you want to allow to connect to your API)
 origins = [

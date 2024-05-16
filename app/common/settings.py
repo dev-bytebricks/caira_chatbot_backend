@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # User Usage Limits
     FREE_PLAN_FILE_UPLOAD_LIMIT: int
+    FREE_PLAN_MSG_LIMIT: int
     PREMIUM_PLANS_FILE_UPLOAD_LIMIT: int
 
     # MySQL Database Config
@@ -76,12 +77,15 @@ class Settings(BaseSettings):
 
     # Azure OpenAI Config
     AZURE_OPENAI_API_KEY: str
-    AZURE_OPENAI_ENDPOINT: str
     AZURE_OPENAI_API_VERSION: str
-    AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME: str
-    AZURE_OPENAI_CHAT_PRIMARY_DEPLOYMENT_NAME: str
-    AZURE_OPENAI_CHAT_SECONDARY_DEPLOYMENT_NAME: str
 
+    # Javelin Config
+    JAVELIN_API_ENDPOINT: str
+    JAVELIN_API_KEY: str
+    JAVELIN_CHAT_PRIMARY_ROUTE: str
+    JAVELIN_CHAT_SECONDARY_ROUTE: str
+    JAVELIN_EMBEDDINGS_ROUTE: str
+    
     # Azure Application Insights Config
     AZURE_APP_INSIGHTS_CONN_STRING: str
 

@@ -1,11 +1,29 @@
 import re
 import uuid
 from fastapi import HTTPException, status
+from app.common.settings import get_settings
 from app.schemas.requests.user_chat import Mode
 from app.common import getzep, langchain
+from app.models.user import Plan, Role, User
 
-async def get_ai_response(username, db_session, user_msg, traceless, mode):
+settings = get_settings()
+
+async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
+    username = user.email
+    user_role = user.role
+    user_plan = user.plan
     chat_history = await get_chat_history(username)
+
+    # Check number of messages for regular user with free plan
+    if user_role == Role.User and user_plan == Plan.free:
+        user_message_count = 0
+        for message in chat_history:
+            if message.role == "User":
+                user_message_count += 1
+                if user_message_count == settings.FREE_PLAN_MSG_LIMIT:
+                    yield "You have consumed all of your free messages. Please subscribe to continue using Caira."
+                    return
+    
     chat_history = chat_history[-10:]
     qa_chain = langchain.get_qa_chain(db_session, username)
     ai_msg=''
