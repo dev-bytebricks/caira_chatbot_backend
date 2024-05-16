@@ -6,8 +6,13 @@ logging_config.setup_logging()
 from app.routes import auth, user, user_chat, user_document, admin_config, admin_knowledge_base, payment, stripe
 from app.common.settings import get_settings
 from fastapi.middleware.cors import CORSMiddleware
+from azure.monitor.opentelemetry import configure_azure_monitor
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 settings = get_settings()
+
+# Configure Azure monitor collection telemetry pipeline
+configure_azure_monitor(connection_string=settings.AZURE_APP_INSIGHTS_CONN_STRING)
 
 # List of allowed origins (i.e., the frontend URLs that you want to allow to connect to your API)
 origins = [
@@ -31,7 +36,6 @@ def create_application():
 
 app = create_application()
 
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # Allows specified origins to make requests
@@ -43,3 +47,5 @@ app.add_middleware(
 @app.get("/")
 async def root():
     return {"message": "Caira V2 is live"}
+
+FastAPIInstrumentor.instrument_app(app)

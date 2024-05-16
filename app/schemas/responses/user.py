@@ -1,14 +1,14 @@
 from typing import Union
 from datetime import datetime
 from pydantic import EmailStr, BaseModel
-from app.models.user import Role
+from app.models.user import Role, Plan
 from app.schemas.responses.base import BaseResponse
 
 class UserResponse(BaseResponse):
     id: int
     name: str
-    plan: str
-    paid: bool
+    plan: Union[Plan, None] = None
+    paid: Union[bool, None] = None
     trial_expiry: Union[str, None, datetime] = None
     email: EmailStr
     is_active: bool

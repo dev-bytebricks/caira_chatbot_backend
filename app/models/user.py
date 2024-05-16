@@ -20,8 +20,8 @@ class User(Base):
     name = Column(String(150))
     email = Column(String(255), unique=True, index=True)
     paid = Column(Boolean, default=False)
-    plan = Column(String(200), default=Plan.free.value)
-    stripeId = Column(String(200), nullable=True, default='')
+    plan = Column(Enum(Plan), nullable=True)
+    stripeId = Column(String(200), nullable=True)
     password = Column(String(100))
     is_active = Column(Boolean, default=False)
     role = Column(Enum(Role), nullable=False)
@@ -30,8 +30,8 @@ class User(Base):
     updated_at = Column(DATETIME(fsp=3), nullable=True, default=None, onupdate=func.now())
     created_at = Column(DATETIME(fsp=3), nullable=False, default=func.now())
     
-    tokens = relationship("UserToken", back_populates="user")
-    documents = relationship("UserDocument", back_populates="user")
+    tokens = relationship("UserToken", back_populates="user", cascade="all, delete-orphan")
+    documents = relationship("UserDocument", back_populates="user", cascade="all, delete-orphan")
 
     def get_context_string(self, context: str):
         return f"{context}{self.password[-6:]}{self.updated_at.strftime('%m%d%Y%H%M%S')}".strip()

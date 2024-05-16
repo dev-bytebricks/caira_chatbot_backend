@@ -4,7 +4,7 @@ import uuid
 from fastapi import HTTPException, status
 from app.common.security import delete_refresh_tokens_from_db, get_user_from_db, hash_password, is_password_strong_enough, verify_password
 from app.common import getzep, azurecloud
-from app.models.user import AdminConfig, User, Plan, Role
+from app.models.user import AdminConfig, User, Plan, Role, UserDocument
 from app.services import email, payment
 from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT
 
@@ -104,7 +104,7 @@ async def activate_user_account(data, session, background_tasks):
             raise HTTPException(status_code=400, detail="Couldn't create stripe id for customer")
         user.paid = False
         user.stripeId = stripeId
-        user.plan = Plan.free.value
+        user.plan = Plan.free
         user.trial_expiry = datetime.now(timezone.utc) + timedelta(days=7)    
 
     user.is_active = True
@@ -154,18 +154,18 @@ async def logout_user(username, session):
 
 async def _check_user_in_zep(user_id):
     if await getzep.check_user_exists(user_id):
-        logger.error("User with this email already exists in Zep.")
+        logger.exception("User with this email already exists in Zep.")
         raise HTTPException(status_code=400, detail="User with this email already exists in Zep.")
 
     if len(await getzep.get_all_sessions_of_user(user_id)) > 0:
-        logger.error(f'Zep session already registered for user')
+        logger.exception(f'Zep session already registered for user')
         raise HTTPException(status_code=400, detail="Zep session already registered for user.")
     
 async def _add_user_to_zep(user):
     if not await getzep.check_user_exists(user.email):
         await getzep.add_new_user(user.email, "emailid", user.name)
     else:
-        logger.error("User with this email already exists in Zep.")
+        logger.exception("User with this email already exists in Zep.")
         raise HTTPException(status_code=400, detail="User with this email already exists in Zep.")
 
     user_all_sessions = await getzep.get_all_sessions_of_user(user.email)
@@ -173,12 +173,13 @@ async def _add_user_to_zep(user):
         await getzep.add_session(user_id=user.email, sessionid=uuid.uuid4().hex)
         user_all_sessions = await getzep.get_all_sessions_of_user(user.email)
     else:
-        logger.error(f'Zep session already registered for user, session: {user_all_sessions}')
+        logger.exception(f'Zep session already registered for user, session: {user_all_sessions}')
         raise HTTPException(status_code=400, detail="Zep session already registered for user.")
     
 async def fetch_app_info(session):
     admin_config = session.query(AdminConfig).first()
     if admin_config is None:
+        logger.exception("App info not found in database.")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="App info not found in database.")
     return admin_config
 
@@ -189,20 +190,34 @@ async def generate_pubsub_client_token(user: User):
         token = await azurecloud.get_pubsub_client_token(user.email)
     return {"token": token}
 
-async def delete_user(username, session):
-    zep_session_id = _get_zep_session_id_by_username(username)
+async def delete_user(user: User, session):
     try:
+        # Check if any user documents are still present
+        user_docs = session.query(UserDocument).filter(UserDocument.user_id == user.email).all()
+        if user_docs:
+            if any(doc.status not in ["del_failed"] for doc in user_docs):
+                raise Exception("Delete all user files and then try again.")
+    
+        # delete customer from stripe (exclude admins because their stripeId is not maintained)
+        if user.role == Role.User and user.stripeId:
+            await payment.delete_customer(user.stripeId)
+
+        # clear zep chat history
+        zep_session_id = await _get_zep_session_id_by_username(user.email)
         await getzep.delete_session(zep_session_id)
-        await getzep.delete_user(username)
-        session.query(User).filter(User.email == username).delete(synchronize_session='fetch')
+        await getzep.delete_user(user.email)
+        
+        # delete user entry from database
+        session.delete(user)
         session.commit()
     except Exception as ex:
+        logger.exception(f"Error occured while deleting user: {ex}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
                             detail=f"Error occured while deleting user: {ex}")
 
 async def _get_zep_session_id_by_username(username):
     user_all_sessions = await getzep.get_all_sessions_of_user(username)
     if len(user_all_sessions) == 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No Zep session found")
+        raise Exception("No Zep session found")
     session_id = user_all_sessions[0].session_id
     return session_id

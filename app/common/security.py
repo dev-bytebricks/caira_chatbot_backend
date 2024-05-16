@@ -143,7 +143,7 @@ async def get_user_from_db(email: str, session: Session):
     try:
         user = session.query(User).filter(User.email == email).first()
     except Exception as user_exec:
-        logger.error(f"User Not Found, Email: {email} | Database Exception: {user_exec}")
+        logger.exception(f"User Not Found, Email: {email} | Database Exception: {user_exec}")
         user = None
     return user
     

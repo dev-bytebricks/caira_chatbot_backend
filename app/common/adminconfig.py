@@ -47,7 +47,7 @@ class AdminConfig:
                 session.commit()
 
         except Exception as ex:
-            logger.error(f"Exception occured while reading admin config from database | Using default admin config | Error: {ex}")
+            logger.exception(f"Exception occured while reading admin config from database | Using default admin config | Error: {ex}")
             cls.OPENAI_MODEL_NAME = "gpt-4-turbo-preview"
             cls.OPENAI_MODEL_TEMPERATURE = 0.4
             cls.LLM_STREAMING = True

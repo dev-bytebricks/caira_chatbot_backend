@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.common.database import get_session
-from app.common.security import oauth2_scheme, validate_access_token
+from app.common.security import oauth2_scheme, validate_access_token, get_current_user
 from app.schemas.requests.user_document import DeleteDocumentsRequest, ValidateDocumentsRequest
 from app.services import user_document
 
@@ -18,8 +18,8 @@ async def get_azure_storage_token():
     return await user_document.get_azure_storage_token()
 
 @user_document_router_protected.post("/upload-gdrive")
-async def upload_documents_gdrivelink(gdrivelink: str = Query(..., title="Google Drive Link"), username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
-    response = await user_document.enqueue_gdrive_upload(gdrivelink, username, session)
+async def upload_documents_gdrivelink(gdrivelink: str = Query(..., title="Google Drive Link"), userdata = Depends(get_current_user), session: Session = Depends(get_session)):
+    response = await user_document.enqueue_gdrive_upload(gdrivelink, userdata, session)
     status_code = status.HTTP_200_OK
     if len(response.failed_files) > 0:
         status_code = status.HTTP_417_EXPECTATION_FAILED

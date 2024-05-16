@@ -30,6 +30,13 @@ async def create_customer(user: User):
     except stripe.error.StripeError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+async def delete_customer(stripe_id: str):
+    try:
+        stripe_customer = await stripe.Customer.delete_async(sid=stripe_id)
+        return stripe_customer.id
+    except stripe.error.StripeError as e:
+        raise Exception(f"Stripe API Error: {e}")
+
 async def checkSubscriptionStatus(subscriptionId): 
     subscription = await Subscription.retrieve_async(id=subscriptionId, expand= ['items.data.price.product'])
     

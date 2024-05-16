@@ -30,7 +30,6 @@ async def get_files_info_from_link(url: str):
         elif len(files_info) == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Unable to fetch {gdrive_url_type} info from google drive (File type not supported)")  
     else:
-        logger.error("Please enter a valid google drive link")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid google drive link provided")
 
     return files_info
@@ -63,7 +62,7 @@ def _get_file_info_from_file_id(file_id:str):
                 return [response]
         return []
     except HttpError as error:
-        logger.error(f"An error occurred: {error}")
+        logger.exception(f"An error occurred: {error}")
         return None
 
 def _get_files_info_from_folder_id(folder_id:str):
@@ -75,11 +74,11 @@ def _get_files_info_from_folder_id(folder_id:str):
         }
         res = getfilelist.GetFileList(resource)
     except Exception as error:
-        logger.error(f"An error occurred: {error}")
+        logger.exception(f"An error occurred: {error}")
         return None
 
     if res is None or res.get("fileList") is None:
-        logger.error(f"An error occurred: Unable to list files in folder")
+        logger.exception(f"An error occurred: Unable to list files in folder")
         return None
     
     finalFilesList = []

@@ -3,21 +3,37 @@ import logging
 from typing import List
 from fastapi import HTTPException, status
 from app.common.settings import get_settings
-from app.models.user import UserDocument
+from app.models.user import UserDocument, User, Plan, Role
 from app.schemas.responses.user_document import FileInfo, GdriveUploadResponse, DeleteDocumentsResponse, DocumentsListResponse, ValidateDocumentsResponse, FileExists
 from app.common import gdrive, azurecloud
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import case, desc
+from sqlalchemy import case, desc, func
 
 settings = get_settings()
 
 logger = logging.getLogger(__name__)
 
-async def enqueue_gdrive_upload(gdrivelink, username, session: Session):
+async def enqueue_gdrive_upload(gdrivelink, userdata: User, session: Session):
+    username = userdata.email
+    user_plan = userdata.plan
+    user_role = userdata.role
+    user_doc_count = session.query(func.count(UserDocument.id))\
+        .filter(UserDocument.user_id == username,
+               UserDocument.status != "del_failed").scalar()
+    
     files_info = await gdrive.get_files_info_from_link(gdrivelink)
+    gdrive_files_count = len(files_info)
 
-    # if len(files_info) > 20:
-    #      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Max 20 files are allowed per Google Drive link")
+    # Determine the maximum number of files the user is allowed to have
+    if user_role == Role.User:
+        max_files_allowed = settings.FREE_PLAN_FILE_UPLOAD_LIMIT if user_plan == Plan.free else settings.PREMIUM_PLANS_FILE_UPLOAD_LIMIT
+    elif user_role == Role.Admin:
+        max_files_allowed = settings.PREMIUM_PLANS_FILE_UPLOAD_LIMIT
+    
+    # Check if adding new files would exceed the allowed maximum
+    total_files_after_upload = user_doc_count + gdrive_files_count
+    if total_files_after_upload > max_files_allowed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Google Drive link files count exceeds allowed limit. Only {max_files_allowed - user_doc_count} more files can be uploaded.")
 
     unique_files = {}
     for file_info in files_info:

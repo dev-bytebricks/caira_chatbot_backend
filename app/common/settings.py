@@ -13,10 +13,14 @@ class Settings(BaseSettings):
     APP_NAME: str
     DEBUG: bool
 
-        # Stripe Config
+    # Stripe Config
     STRIPE_PUBLIC_KEY: str
     STRIPE_SECRET_KEY: str
     STRIPE_WEBHOOK_SECRET: str
+
+    # User Usage Limits
+    FREE_PLAN_FILE_UPLOAD_LIMIT: int
+    PREMIUM_PLANS_FILE_UPLOAD_LIMIT: int
 
     # MySQL Database Config
     MYSQL_HOST: str
@@ -77,6 +81,9 @@ class Settings(BaseSettings):
     AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME: str
     AZURE_OPENAI_CHAT_PRIMARY_DEPLOYMENT_NAME: str
     AZURE_OPENAI_CHAT_SECONDARY_DEPLOYMENT_NAME: str
+
+    # Azure Application Insights Config
+    AZURE_APP_INSIGHTS_CONN_STRING: str
 
     # Pinecone Config
     PINECONE_API_KEY: str

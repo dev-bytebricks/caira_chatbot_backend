@@ -1,3 +1,4 @@
+import logging
 from fastapi import HTTPException, APIRouter, Depends
 from app.common.security import oauth2_scheme, validate_access_token
 from app.common.settings import get_settings
@@ -6,7 +7,10 @@ from app.services import payment
 from app.common.security import get_current_user
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
+
 # This is your test secret API key.
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -28,7 +32,7 @@ async def customer_portal(user: User = Depends(get_current_user)):
         )
         return portalSession.url
     except Exception as e:
-        print(e)
+        logger.exception(e)
         raise HTTPException(status_code=500, detail="Server error")
 
 @payments_router_protected.get("/prices")
@@ -37,6 +41,7 @@ async def get_prices():
         prices = await stripe.Price.list_async(active=True, expand=['data.product'])
         return {"prices": prices.data}
     except StripeError as e:
+        logger.exception(e)
         raise HTTPException(status_code=400, detail=str(e))
     
 
@@ -50,8 +55,9 @@ async def create_payment_session(priceId: str, user: User = Depends(get_current_
         return client_secret
     except HTTPException as http_exc:
         # This will handle our custom raised HTTPExceptions
+        logger.exception(http_exc)
         raise http_exc    
     except Exception as e:
-        print(e)
+        logger.exception(e)
         raise HTTPException(status_code=500, detail="Server error")
 
