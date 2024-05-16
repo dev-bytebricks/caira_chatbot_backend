@@ -1,3 +1,4 @@
+import logging
 from fastapi import Request, HTTPException, APIRouter, Depends
 from fastapi.responses import JSONResponse
 import stripe.webhook
@@ -7,10 +8,12 @@ from sqlalchemy.orm import Session
 from app.common.database import get_session
 from app.services.user import update_user_payment
 
+logger = logging.getLogger(__name__)
+
 settings = get_settings()
+
 # This is your test secret API key.
 stripe.api_key = settings.STRIPE_SECRET_KEY
-webhook_secret = settings.STRIPE_WEBHOOK_SECRET
 
 stripe_router = APIRouter(
     prefix="/stripe",
@@ -28,10 +31,10 @@ async def webhook_received(request: Request, session: Session = Depends(get_sess
         event = stripe.Webhook.construct_event(
             payload=request_body_bytes,  # Pass the raw bytes of the request body
             sig_header=signature,
-            secret=webhook_secret)
+            secret=settings.STRIPE_WEBHOOK_SECRET)
         data = event['data']
     except Exception as e:
-        print(e, "error in stripe ")
+        logger.exception(e)
         raise HTTPException(status_code=400, detail="Webhook signature verification failed.")
     
     event_type = event['type']

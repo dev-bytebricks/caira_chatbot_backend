@@ -14,6 +14,13 @@ class Plan(enum.Enum):
     three_month = "Three Month"
     six_month = "Six Month"
 
+    @classmethod
+    def from_string(cls, string_value: str):
+        for member in cls:
+            if member.value.lower() == string_value.lower():
+                return member
+        raise ValueError(f"'{string_value}' is not a valid {cls.__name__}")
+    
 class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)

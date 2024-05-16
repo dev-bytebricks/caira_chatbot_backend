@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, status, Query, HTTPException
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.common.database import get_session
-from app.common.security import oauth2_scheme, validate_access_token
+from app.common.security import oauth2_scheme, validate_access_token, get_current_user
 from app.schemas.responses.user_chat import AiResponse, ChatHistoryResponse, ChatMessage
 from app.schemas.requests.user_chat import AiRequest
 from app.services import user_chat
@@ -17,9 +17,9 @@ user_chat_router_protected = APIRouter(
 
 
 @user_chat_router_protected.post("/send-msg", status_code=status.HTTP_200_OK, response_model=AiResponse)
-async def get_ai_response(data: AiRequest, username: str = Depends(validate_access_token), session: Session = Depends(get_session)):
+async def get_ai_response(data: AiRequest, userdata = Depends(get_current_user), session: Session = Depends(get_session)):
     #return await user_chat.get_ai_response(username, session, data.user_msg, data.traceless, data.mode)
-    response = StreamingResponse(user_chat.get_ai_response(username, session, data.user_msg, data.traceless, data.mode), media_type="text/event-stream")
+    response = StreamingResponse(user_chat.get_ai_response(userdata, session, data.user_msg, data.traceless, data.mode), media_type="text/event-stream")
     response.headers['traceless'] = str(data.traceless).lower()
     return response 
 

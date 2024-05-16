@@ -12,7 +12,7 @@ settings = get_settings()
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class SubscriptionStatus(BaseModel):
-    plan: str
+    plan: Plan
     status: bool
 
 async def create_customer(user: User):
@@ -44,12 +44,12 @@ async def checkSubscriptionStatus(subscriptionId):
         status = subscription["status"]
         items = subscription["items"]["data"][0]
         plan = items["price"]["lookup_key"]        
-
+        plan_enum = Plan.from_string(plan)
+        
         if(status == "active"):
-            print("Updating plan", plan)
-            return SubscriptionStatus(plan=plan, status=True)
+            return SubscriptionStatus(plan=plan_enum, status=True)
         else:
-            return SubscriptionStatus(plan=Plan.free.value, status=False)
+            return SubscriptionStatus(plan=Plan.free, status=False)
     else:
         raise HTTPException(status_code=400, detail="Subscription was not found")
 
