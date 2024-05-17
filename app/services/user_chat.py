@@ -47,11 +47,11 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
         if latest_ai_response is None:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No AI response found in chat history")
         if mode == Mode.Simplify:
-            user_msg = f'''Please simplify your response where you say: "{latest_ai_response}"'''
+            user_msg = f'''Repeat your last response where you say: "{latest_ai_response}" but make it understandable to a 21 year old.'''
         elif mode == Mode.Elaborate:
-            user_msg = f'''Please elaborate your response where you say: "{latest_ai_response}"'''
+            user_msg = f'''Repeat your last response where you say: "{latest_ai_response}" but with more detail including relevant case law and legal precedent if available.'''
         else:
-            user_msg = f'''Please give me a legal precedent on your following response: "{latest_ai_response}"'''
+            user_msg = f'''Repeat your last response where you say: "{latest_ai_response}" but tell me what I could consider step-by-step.'''
         
         async for content in _stream_response(chain=qa_chain, user_msg=user_msg, zep_chat_history=chat_history):
             ai_msg += content
