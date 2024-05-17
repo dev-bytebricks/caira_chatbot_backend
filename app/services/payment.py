@@ -65,8 +65,8 @@ async def create_checkout_session(userId, customer_id, price_id):
             }],
             client_reference_id= userId,
             mode='subscription',
-            success_url= settings.FRONTEND_HOST,
-            cancel_url= settings.FRONTEND_HOST,
+            success_url=f"{settings.FRONTEND_HOST}/user/payment/feedback",
+            cancel_url=f"{settings.FRONTEND_HOST}/user/dashboard",
         )
         # Check if the session is successfully created
         if not session:
