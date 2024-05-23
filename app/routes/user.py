@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.common.database import get_session
 from app.common.security import oauth2_scheme, validate_access_token, get_current_user
 from app.schemas.responses.user import UserResponse, AppInfoResponse
-from app.schemas.requests.user import RegisterUserRequest, VerifyUserRequest, EmailRequest, ResetRequest
+from app.schemas.requests.user import RegisterUserRequest, VerifyUserRequest, EmailRequest, ResetRequest, DeleteUserRequest
 from app.services import user
 
 # For Unprotected User Endpoints
@@ -42,15 +42,20 @@ async def verify_user(data: VerifyUserRequest, background_tasks: BackgroundTasks
     await user.activate_user_account(data, session, background_tasks)
     return JSONResponse({"message": "Account is activated successfully."})
 
+@user_router.delete("/delete", status_code=status.HTTP_200_OK)
+async def delete_user(data: DeleteUserRequest, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
+    await user.delete_user(data, session)
+    return JSONResponse({"message": "Account has been deleted successfully."})
+
 ######## Users API Secured Endpoints ########
 @user_router_protected.get("/me", status_code=status.HTTP_200_OK, response_model=UserResponse)
 async def fetch_user(user = Depends(get_current_user)):
     return user
 
-@user_router_protected.delete("/delete", status_code=status.HTTP_200_OK)
-async def delete_user(userdata = Depends(get_current_user), session: Session = Depends(get_session)):
-    await user.delete_user(userdata, session)
-    return JSONResponse({"message": "Account has been deleted successfully."})
+@user_router_protected.post("/request-delete", status_code=status.HTTP_200_OK)
+async def delete_user(background_tasks: BackgroundTasks, userdata = Depends(get_current_user)):
+    await user.request_user_delete(userdata, background_tasks)
+    return JSONResponse({"message": "A verification email has been sent"})
 
 @user_router_protected.get("/app-info", status_code=status.HTTP_200_OK, response_model=AppInfoResponse)
 async def fetch_app_info(session: Session = Depends(get_session)):
