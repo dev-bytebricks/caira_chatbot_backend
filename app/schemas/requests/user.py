@@ -10,6 +10,10 @@ class RegisterUserRequest(BaseModel):
 class VerifyUserRequest(BaseModel):
     token: str
     email: EmailStr
+
+class DeleteUserRequest(BaseModel): 
+    token: str
+    email: EmailStr
     
 class EmailRequest(BaseModel):
     email: EmailStr

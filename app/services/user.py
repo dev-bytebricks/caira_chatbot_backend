@@ -6,7 +6,7 @@ from app.common.security import delete_refresh_tokens_from_db, get_user_from_db,
 from app.common import getzep, azurecloud
 from app.models.user import AdminConfig, User, Plan, Role, UserDocument
 from app.services import email, payment
-from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT
+from app.utils.email_context import FORGOT_PASSWORD, USER_VERIFY_ACCOUNT, USER_DELETE_ACCOUNT
 
 logger = logging.getLogger(__name__)
 
@@ -190,8 +190,29 @@ async def generate_pubsub_client_token(user: User):
         token = await azurecloud.get_pubsub_client_token(user.email)
     return {"token": token}
 
-async def delete_user(user: User, session):
+async def request_user_delete(user, background_tasks):
+    await email.send_delete_verification_email(user, background_tasks)
+
+async def delete_user(data, session):
     try:
+        user = session.query(User).filter(User.email == data.email).first()
+        # check if user has registered
+        if not user:
+            raise Exception("This link is not valid.")
+    
+        # form user token
+        user_token = user.get_context_string(context= USER_DELETE_ACCOUNT)
+
+        # compare tokens (checks if token points to the intended account)
+        try:
+            token_valid = verify_password(user_token, data.token)
+        except Exception as verify_exec:
+            logger.exception(verify_exec)
+            token_valid = False
+        if not token_valid:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, 
+                            detail="This link either expired or not valid.")
+        
         # Check if any user documents are still present
         user_docs = session.query(UserDocument).filter(UserDocument.user_id == user.email).all()
         if user_docs:
