@@ -63,7 +63,7 @@ async def send_account_activation_confirmation_email(user: User, background_task
 async def send_password_reset_email(user: User, background_tasks: BackgroundTasks):
     string_context = user.get_context_string(context=FORGOT_PASSWORD)
     token = hash_password(string_context)
-    reset_url = f"{settings.FRONTEND_HOST}/reset-password?token={token}&email={user.email}"
+    reset_url = f"{settings.FRONTEND_HOST}/auth/reset-password?token={token}&email={user.email}"
     data = {
         'app_name': settings.APP_NAME,
         "name": user.name,
