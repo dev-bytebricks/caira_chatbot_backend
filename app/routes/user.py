@@ -42,7 +42,7 @@ async def verify_user(data: VerifyUserRequest, background_tasks: BackgroundTasks
     await user.activate_user_account(data, session, background_tasks)
     return JSONResponse({"message": "Account is activated successfully."})
 
-@user_router.delete("/delete", status_code=status.HTTP_200_OK)
+@user_router.post("/delete", status_code=status.HTTP_200_OK)
 async def delete_user(data: DeleteUserRequest, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     await user.delete_user(data, session)
     return JSONResponse({"message": "Account has been deleted successfully."})
