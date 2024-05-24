@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger(__name__)
 
-SPECIAL_CHARACTERS = ['!', '@', '#', '$', '%', '=', ':', '?', '.', '/', '|', '~', '>']
+SPECIAL_CHARACTERS = ['-', '!', '@', '#', '$', '%', '=', ':', '?', '.', '/', '|', '~', '>']
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
