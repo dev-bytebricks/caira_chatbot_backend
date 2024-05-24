@@ -27,6 +27,9 @@
             display: inline-block; /* Ensures it behaves like a block but fits the content */
             text-align: center; /* Centers text in the button */
         }
+        .buttonText{
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -36,7 +39,7 @@
         <p>A request has been made to delete your account!</p>
         <p>Please click the button below to confirm your deletion.</p>
         <p>
-            <a href="{{ delete_url }}" class="button">Delete Account</a>
+            <a href="{{ delete_url }}" class="button"><span class="buttonText">Delete Account</span></a>
         </p>
         <p>If the button above doesn't work, please copy and paste the following URL into your browser:</p>
         <p><a href="{{ delete_url }}">{{ delete_url }}</a></p>
