@@ -16,29 +16,66 @@
             margin-bottom: 16px;
         }
         .button {
+            color: #fff; /* Ensures text is white in all states */
+            background-color: #AA2C76; /* Purple background */
+            border: none; /* No border */
+            border-radius: .25rem; /* Rounded corners */
+            text-decoration: none; /* No underline */
+            padding: .375rem .75rem; /* Padding around text */
+            font-size: 1rem; /* Text size */
+            line-height: 1.5; /* Line height */
+            display: inline-block; /* Ensures it behaves like a block but fits the content */
+            text-align: center; /* Centers text in the button */
+        }
+        .bullet-points {
+            margin: 20px 20px;
+            padding: 0;
+            list-style-type: disc;
+        }
+        .bullet-points li {
+            margin: 10px 0;
+        }
+        .bold {
+            font-weight: bold;
+        }
+        .buttonText{
             color: #fff;
-            background-color: #007BFF;
-            border-color: #007BFF;
-            border-radius: .25rem;
-            text-decoration: none;
-            padding: .375rem .75rem;
-            font-size: 1rem;
-            line-height: 1.5;
         }
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <img src="#" alt="logo" class="logo">
-        <h1>Welcome to {{ app_name }}!</h1>
-        <p>Dear {{ name }},</p>
-        <p>Thank you for verifying your account. We are really excited to have you in {{ app_name }} family.</p>
-        <p>Your account have been activated now. You can sign-in now using below button.</p>
-        <p>
-            <a href="{{ login_url }}" target="_blank" class="button">Sign In</a>
-        </p>
-        <p>Thank you for choosing us!</p>
-        <p>Best Regards,<br>{{ app_name }}</p>
-    </div>
+        <div class="email-container">
+            <a href="http://www.unwildered.co.uk" target="_blank"><img src="https://drive.google.com/uc?export=view&id=13d0FfzvYHZmjoJCOQk4B2QrKZAwBMQjB" alt="logo" class="logo"></a>
+            <h1>Hello {{name}}! I’m {{app_name}}</h1>
+            <p>I cannot wait to speak with you. Together, we will make your journey through the legal process a bit easier and more emotionally bearable.</p>
+          
+                <span class="bold">About Me</span>
+                <ul class="bullet-points">
+                    <li>Backed by more than 10,000+ official legal documents and updated every week.</li>
+                    <li>What I say is relevant to England and Wales.</li>
+                    <li>I remember our conversations.</li>
+                    <li>Our conversations are private and not shared with other humans.</li>
+                </ul>
+                <p class="bold">I do the impossible for you in seconds:</p>
+                <p><span>Answers about law or your PDF documents.</span></p>
+                <p><span>Drafts of email responses or position statements.</span></p>
+            
+            <p>
+                <a href="{{ login_url }}" target="_blank" class="button"><span class="buttonText">Start Asking</span></a>
+                <br>
+            </p>
+      
+            <p class="bold">Top tip!</p>
+            <p><span>SIMPLIFY: Make the response easier to understand.</span></p>
+            <p><span>ELABORATE: Explain with more detail.</span></p>
+            <p><span>STEP-BY-STEP: Read what you could consider step-by-step.</span><br></p>
+
+            <p class="bold">Talk to me about:</p>
+            <p><span>Divorce, Property, Social Services, Criminal, Probate, Child Arrangements, Will, EHCP, Landlord, Tenancy, Inheritance, EHCP and SEND.</span><br></p>
+        
+            <p><span>Want to talk to me about other things or share suggestions? Send me an email: hello@unwildered.co.uk</span><br></p>
+          
+            <p>Yours<br><span>Caira</span></p> 
+        </div>
 </body>
 </html>
