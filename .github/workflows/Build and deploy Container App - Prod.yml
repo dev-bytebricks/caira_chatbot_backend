@@ -22,7 +22,7 @@ jobs:
         with:
           appSourcePath: ${{ github.workspace }}
           dockerfilePath: Dockerfile.cloud
-          containerAppName: fastapi-app
-          acrName: unwilderedprod
-          imageToBuild: unwilderedprod.azurecr.io/cairav2-backend-prod:latest-${{ github.sha }}
+          containerAppName: caira-v2-prod-backend
+          acrName: unwildered
+          imageToBuild: unwildered.azurecr.io/caira-v2-prod-backend:latest-${{ github.sha }}
           resourceGroup: CairaProduction
