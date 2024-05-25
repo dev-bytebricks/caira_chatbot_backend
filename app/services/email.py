@@ -77,3 +77,16 @@ async def send_password_reset_email(user: User, background_tasks: BackgroundTask
         context=data,
         background_tasks=background_tasks
     )
+
+async def send_subscription_cancellation_email(user: User, background_tasks: BackgroundTasks):
+    data = {
+        "name": user.name,
+    }
+    subject = f"Cancellation Confirmation | Unwildered"
+    await send_email(
+        recipients=[user.email],
+        subject=subject,
+        template_name="user/subscription-cancellation.html",
+        context=data,
+        background_tasks=background_tasks
+    )
