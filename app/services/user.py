@@ -47,7 +47,8 @@ async def create_user_account(data, session, background_tasks):
     user.name = data.name
     user.email = data.email
     user.password = hash_password(data.password)
-    user.role = data.role
+    user.role = Role.User # For production safety, create account will always create regular user.
+    # user.role = data.role
     user.is_active = False
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)

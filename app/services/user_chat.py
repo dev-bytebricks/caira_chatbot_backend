@@ -28,7 +28,7 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
             if message.role == "User":
                 user_message_count += 1
                 if user_message_count == settings.FREE_PLAN_MSG_LIMIT:
-                    yield "You have consumed all of your free messages. Please subscribe to continue using Caira."
+                    yield "You have consumed all of your free messages. Subscribe to Caira in the side menu. You can access it by pressing the icon on the top left corner of the page."
                     return
     
     zep_chat_history = zep_chat_history[-10:]

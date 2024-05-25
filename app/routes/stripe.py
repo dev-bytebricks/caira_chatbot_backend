@@ -1,8 +1,10 @@
 import logging
-from fastapi import Request, HTTPException, APIRouter, Depends
+from fastapi import BackgroundTasks, Request, HTTPException, APIRouter, Depends
 from fastapi.responses import JSONResponse
 import stripe.webhook
 from app.common.settings import get_settings
+from app.models.user import User
+from app.services.email import send_subscription_cancellation_email
 import stripe
 from sqlalchemy.orm import Session
 from app.common.database import get_session
@@ -23,7 +25,7 @@ stripe_router = APIRouter(
 )
 
 @stripe_router.post("/webhook")
-async def webhook_received(request: Request, session: Session = Depends(get_session)):
+async def webhook_received(request: Request, background_tasks: BackgroundTasks, session: Session = Depends(get_session)):
     try:
         # Correctly retrieve the raw body for signature verification
         signature = request.headers.get('stripe-signature')
@@ -39,9 +41,8 @@ async def webhook_received(request: Request, session: Session = Depends(get_sess
     
     event_type = event['type']
     data_object = data['object']
-    
-    # Handle the event accordingly
 
+    # Handle the event accordingly
     if event_type == 'customer.subscription.updated':
         if data_object["customer"]:
             subscription_id = data_object["id"]
@@ -55,7 +56,11 @@ async def webhook_received(request: Request, session: Session = Depends(get_sess
             subscription_id = data_object["id"]
 
             await update_user_payment(customer_id, subscription_id, session)
-         
+            
+            # Subscription Cancellation Email
+            user = session.query(User).filter(User.stripeId == customer_id).first()
+            await send_subscription_cancellation_email(user, background_tasks)
+
     # Handle other events...
 
     return JSONResponse({'status': 'success'})
