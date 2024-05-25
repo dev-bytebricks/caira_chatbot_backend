@@ -20,15 +20,13 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
     user_role = user.role
     user_plan = user.plan
     zep_chat_history = await get_chat_history(username)
-    logger.info(zep_chat_history)
-    logger.info("user role and plan: ", user_role, user_plan)
+
     # Check number of messages for regular user with free plan
     if user_role == Role.User and user_plan == Plan.free:
         user_message_count = 0
         for message in zep_chat_history:
             if message.role == "User":
                 user_message_count += 1
-                logger.info(f'inside if message.role == "User" | user_message_count: {user_message_count} | free plan limit: {settings.FREE_PLAN_MSG_LIMIT}')
                 if user_message_count == settings.FREE_PLAN_MSG_LIMIT:
                     yield "You have consumed all of your free messages. Please subscribe to continue using Caira."
                     return
