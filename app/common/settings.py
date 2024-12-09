@@ -75,12 +75,12 @@ class Settings(BaseSettings):
     ZEP_API_URL: str
 
     # Google Cloud Service Account JSON
-    GOOGLE_SERVICE_ACCOUNT_JSON: str
-    CONSUMER_FILE_CHARACTERS_LIMIT: int
+    # GOOGLE_SERVICE_ACCOUNT_JSON: str
+    # CONSUMER_FILE_CHARACTERS_LIMIT: int
 
-    @property
-    def GOOGLE_SERVICE_ACCOUNT_CREDS(self) -> str:
-        return json.loads(self.GOOGLE_SERVICE_ACCOUNT_JSON)
+    # @property
+    # def GOOGLE_SERVICE_ACCOUNT_CREDS(self) -> str:
+    #     return json.loads(self.GOOGLE_SERVICE_ACCOUNT_JSON)
 
     # Pydantic Settings
     model_config = SettingsConfigDict(extra= "ignore", env_file= find_dotenv(".env"), case_sensitive=True)
