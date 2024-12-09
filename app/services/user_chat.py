@@ -5,7 +5,6 @@ from fastapi import HTTPException, status
 import openai
 import backoff
 from app.common.openai import OpenAIManager
-from app.common.azure_openai import AzureOpenAIManager
 from app.common.settings import get_settings
 from app.schemas.requests.user_chat import Mode
 from app.common import getzep, langchain
@@ -44,10 +43,7 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
                 ai_msg += content
                 yield content
         except openai.RateLimitError:
-            qa_chain = langchain.get_qa_chain(db_session, username, AzureOpenAIManager.CHAT_PRIMARY, AzureOpenAIManager.CHAT_SECONDARY)
-            async for content in _stream_response(chain=qa_chain, user_msg=user_msg, chat_history=langchain_chat_history):
-                ai_msg += content
-                yield content
+            raise HTTPException(status_code=429, detail="OpenAI limit reached for this app")
 
         if not traceless:
             await _add_message_to_chat_history(username, "User", user_msg)
@@ -78,10 +74,7 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
                 ai_msg += content
                 yield content
         except openai.RateLimitError:
-            qa_chain = langchain.get_qa_chain(db_session, username, AzureOpenAIManager.CHAT_PRIMARY, AzureOpenAIManager.CHAT_SECONDARY)
-            async for content in _stream_response(chain=qa_chain, user_msg=user_msg, chat_history=langchain_chat_history):
-                ai_msg += content
-                yield content
+            raise HTTPException(status_code=429, detail="OpenAI limit reached for this app")
 
         if not traceless:
             await _add_message_to_chat_history(username, "AI", ai_msg)

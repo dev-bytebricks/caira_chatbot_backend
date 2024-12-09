@@ -20,9 +20,10 @@ def get_qa_chain(session: Session, username, llm_primary, llm_secondary):
         status="Completed").all()
     
     if len(user_docs) > 0:
-        consumer_retrieval = __get_consumer_retriever_tool(llm_secondary, [f"{username}:{user_doc.document_name}" for user_doc in user_docs], 3)
-        kb_retrieval = __get_kb_retriever_tool(llm_secondary, [kb_doc.document_name for kb_doc in kb_docs], 3)
+        consumer_retrieval = __get_consumer_retriever_tool(llm_secondary, [f"{username}:{user_doc.document_name}:" for user_doc in user_docs], 3)
+        kb_retrieval = __get_kb_retriever_tool(llm_secondary, [f'{kb_doc.document_name}:' for kb_doc in kb_docs], 3)
         return construct_kb_consumer_chain(username, llm_primary, consumer_retrieval, kb_retrieval)
+    
     
     kb_retrieval = __get_kb_retriever_tool(llm_secondary, [kb_doc.document_name for kb_doc in kb_docs], 4)
     return construct_kb_chain(username, llm_primary, kb_retrieval)

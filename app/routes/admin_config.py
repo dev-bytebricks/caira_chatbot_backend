@@ -7,6 +7,7 @@ from app.schemas.responses.admin_config import AdminConfigResponse
 from app.schemas.requests.admin_config import UpdateAdminConfigRequest
 from app.services import admin_config
 
+
 admin_config_router_protected = APIRouter(
     prefix="/admin",
     tags=["Admin"],

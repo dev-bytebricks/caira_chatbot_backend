@@ -2,6 +2,7 @@ import logging
 from app.common.settings import get_settings
 from app.common.adminconfig import AdminConfig
 from langchain_openai import ChatOpenAI
+from langchain_openai import OpenAIEmbeddings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
@@ -14,6 +15,8 @@ class OpenAIManager:
         temperature=0)
     
     CHAT_PRIMARY: ChatOpenAI
+
+    EMBEDDINGS = OpenAIEmbeddings(api_key=settings.OPENAI_API_KEY,model='text-embedding-3-large')
 
     @classmethod
     def update_primary_chat_instance(cls):
