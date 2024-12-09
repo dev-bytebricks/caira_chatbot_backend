@@ -81,7 +81,8 @@ class Settings(BaseSettings):
     # @property
     # def GOOGLE_SERVICE_ACCOUNT_CREDS(self) -> str:
     #     return json.loads(self.GOOGLE_SERVICE_ACCOUNT_JSON)
-
+    
+    
     # Pydantic Settings
     model_config = SettingsConfigDict(extra= "ignore", env_file= find_dotenv(".env"), case_sensitive=True)
 
