@@ -18,7 +18,7 @@ origins = [
 ]
 
 def create_application():
-    application = FastAPI(openapi_url="", docs_url=None, redoc_url=None) # Disable docs for production
+    application = FastAPI() # Disable docs for production #openapi_url="", docs_url=None, redoc_url=None
     application.include_router(user.user_router)
     application.include_router(payment.payments_router_protected)
     application.include_router(stripe.stripe_router)
