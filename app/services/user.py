@@ -46,9 +46,9 @@ async def create_user_account(data, session, background_tasks):
     user = User()
     user.name = data.name
     user.email = data.email
-    user.password = hash_password(data.password)
+    #user.password = hash_password(data.password)
     user.role = Role.User # For production safety, create account will always create regular user.
-    # user.role = data.role
+    user.role = data.role
     user.is_active = False
     user.updated_at = datetime.now(timezone.utc)
     session.add(user)
@@ -164,7 +164,7 @@ async def _check_user_in_zep(user_id):
     
 async def _add_user_to_zep(user):
     if not await getzep.check_user_exists(user.email):
-        await getzep.add_new_user(user.email, "emailid", user.name)
+        await getzep.add_new_user(user.email, user.email, user.name)
     else:
         logger.exception("User with this email already exists in Zep.")
         raise HTTPException(status_code=400, detail="User with this email already exists in Zep.")
@@ -184,12 +184,12 @@ async def fetch_app_info(session):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="App info not found in database.")
     return admin_config
 
-async def generate_pubsub_client_token(user: User):
-    if user.role == Role.Admin:
-        token = await azurecloud.get_pubsub_client_token_admin(user.email)
-    else:
-        token = await azurecloud.get_pubsub_client_token(user.email)
-    return {"token": token}
+# async def generate_pubsub_client_token(user: User):
+#     if user.role == Role.Admin:
+#         token = await azurecloud.get_pubsub_client_token_admin(user.email)
+#     else:
+#         token = await azurecloud.get_pubsub_client_token(user.email)
+#     return {"token": token}
 
 async def request_user_delete(user, background_tasks):
     await email.send_delete_verification_email(user, background_tasks)
@@ -203,7 +203,6 @@ async def delete_user(data, session):
     
         # form user token
         user_token = user.get_context_string(context= USER_DELETE_ACCOUNT)
-
         # compare tokens (checks if token points to the intended account)
         try:
             token_valid = verify_password(user_token, data.token)

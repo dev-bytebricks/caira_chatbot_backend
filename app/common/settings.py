@@ -59,37 +59,12 @@ class Settings(BaseSettings):
     @property
     def MAIL_TEMPLATE_FOLDER(self) -> str:
         return Path(__file__).parent.parent / "templates"
-
-    # Azure Storage Config
-    AZURE_STORAGE_ACCOUNT_KEY: str
-    AZURE_STORAGE_ACCOUNT_NAME: str
-    AZURE_STORAGE_CONSUMER_CONTAINER_NAME: str
-    AZURE_STORAGE_KNOWLEDGE_BASE_CONTAINER_NAME: str
-    AZURE_STORAGE_CONNECTION_STRING: str
-    AZURE_STORAGE_CONSUMER_FILE_DELETE_QUEUE_NAME: str
-    AZURE_STORAGE_KNOWLEDGEBASE_FILE_DELETE_QUEUE_NAME: str
-    AZURE_STORAGE_CONSUMER_GDRIVE_UPLOAD_QUEUE_NAME: str
-    AZURE_STORAGE_KNOWLEDGEBASE_GDRIVE_UPLOAD_QUEUE_NAME: str
-
-    # Azure Web Pubsub Config
-    AZURE_WEB_PUBSUB_ENDPOINT: str
-    AZURE_WEB_PUBSUB_KEY: str
-
-    # Azure OpenAI Config
-    AZURE_OPENAI_API_KEY: str
-    AZURE_OPENAI_ENDPOINT: str
-    AZURE_OPENAI_API_VERSION: str
-    AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT_NAME: str
-    AZURE_OPENAI_CHAT_PRIMARY_DEPLOYMENT_NAME: str
-    AZURE_OPENAI_CHAT_SECONDARY_DEPLOYMENT_NAME: str
     
-    # Azure Application Insights Config
-    AZURE_APP_INSIGHTS_CONN_STRING: str
-
     # OpenAI Config
     OPENAI_API_KEY: str
     OPENAI_CHAT_PRIMARY_MODEL_NAME: str
     OPENAI_CHAT_SECONDARY_MODEL_NAME: str
+    EMBEDDINGS_MODEL_NAME: str
 
     # Pinecone Config
     PINECONE_API_KEY: str
@@ -101,6 +76,7 @@ class Settings(BaseSettings):
 
     # Google Cloud Service Account JSON
     GOOGLE_SERVICE_ACCOUNT_JSON: str
+    CONSUMER_FILE_CHARACTERS_LIMIT: int
 
     @property
     def GOOGLE_SERVICE_ACCOUNT_CREDS(self) -> str:

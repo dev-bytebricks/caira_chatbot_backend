@@ -2,6 +2,7 @@ from app.common.settings import get_settings
 from sqlalchemy.orm import sessionmaker, declarative_base
 from typing import Generator
 from sqlalchemy import create_engine
+from contextlib import contextmanager
 
 settings = get_settings()
 
@@ -14,9 +15,19 @@ engine = create_engine(settings.DATABASE_URI,
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 
+
 def get_session() -> Generator:
     session = SessionLocal()
     try:
         yield session
     finally:
         session.close()
+
+@contextmanager
+def get_dependency_free_session():
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+    

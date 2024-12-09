@@ -1,11 +1,11 @@
-FROM --platform=linux/amd64 python:3.11
+FROM python:3.11
 
 # set work directory
 WORKDIR /app
 
 # set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE = 1
+ENV PYTHONUNBUFFERED = 1
 
 COPY ./requirements.txt .
 

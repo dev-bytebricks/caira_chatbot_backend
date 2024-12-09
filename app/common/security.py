@@ -23,8 +23,14 @@ def hash_password(password):
     return pwd_context.hash(password)
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
-
+    try:
+        if not isinstance(plain_password, str) or not isinstance(hashed_password, str):
+            raise ValueError("Password and token must be strings")
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        print(f"Error in verify_password: {e}")
+        return False
+    
 def is_password_strong_enough(password: str) -> bool:
     if len(password) < 8:
         return False
