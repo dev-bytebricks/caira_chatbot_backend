@@ -14,7 +14,7 @@ settings = get_settings()
 origins = [
     "http://localhost:3000",  # Adjust the port if your React app runs on a different port
     settings.FRONTEND_HOST,  # The default port for FastAPI, if you want to allow it
-    # Add any other origins you want to allow
+     # Add any other origins you want to allow
 ]
 
 def create_application():
