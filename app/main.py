@@ -14,9 +14,8 @@ settings = get_settings()
 origins = [
     "http://localhost:3000",  # Adjust the port if your React app runs on a different port
     settings.FRONTEND_HOST,  # The default port for FastAPI, if you want to allow it
-     # Add any other origins you want to allow
+    "*" # Add any other origins you want to allow
 ]
-
 def create_application():
     application = FastAPI() # Disable docs for production #openapi_url="", docs_url=None, redoc_url=None
     application.include_router(user.user_router)

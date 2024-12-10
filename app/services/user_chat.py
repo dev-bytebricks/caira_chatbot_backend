@@ -43,8 +43,12 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
                 ai_msg += content
                 yield content
         except openai.RateLimitError:
-            raise HTTPException(status_code=429, detail="OpenAI limit reached for this app")
-
+            yield "Error: OpenAI rate limit reached. Please try again later."
+            return
+        except Exception as e:
+            # Handle unexpected errors
+            yield f"An unexpected error occurred: {str(e)}"
+            return
         if not traceless:
             await _add_message_to_chat_history(username, "User", user_msg)
             await _add_message_to_chat_history(username, "AI", ai_msg)
@@ -74,8 +78,11 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
                 ai_msg += content
                 yield content
         except openai.RateLimitError:
-            raise HTTPException(status_code=429, detail="OpenAI limit reached for this app")
-
+            yield "Error: OpenAI rate limit reached. Please try again later."
+            return
+        except Exception as e:
+            yield f"An unexpected error occurred: {str(e)}"
+            return
         if not traceless:
             await _add_message_to_chat_history(username, "AI", ai_msg)
 
