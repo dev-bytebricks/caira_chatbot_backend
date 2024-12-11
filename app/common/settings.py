@@ -8,6 +8,7 @@ from dotenv import find_dotenv, load_dotenv
 load_dotenv(override=True)
 
 class Settings(BaseSettings):
+    CONSUMER_FILE_CHARACTERS_LIMIT:int
 
     # App
     APP_NAME: str
