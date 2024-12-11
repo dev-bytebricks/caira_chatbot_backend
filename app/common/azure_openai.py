@@ -20,6 +20,7 @@
     
 #     CHAT_PRIMARY: AzureChatOpenAI
 
+
 #     @classmethod
 #     def update_primary_chat_instance(cls):
 #         cls.CHAT_PRIMARY = AzureChatOpenAI(
