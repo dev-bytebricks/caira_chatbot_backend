@@ -46,7 +46,6 @@ async def get_ai_response(user: User, db_session, user_msg, traceless, mode):
             yield "Error: OpenAI rate limit reached. Please try again later."
             return
         except Exception as e:
-            # Handle unexpected errors
             yield f"An unexpected error occurred: {str(e)}"
             return
         if not traceless:

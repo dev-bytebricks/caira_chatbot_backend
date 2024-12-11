@@ -24,8 +24,7 @@ def get_qa_chain(session: Session, username, llm_primary, llm_secondary):
         kb_retrieval = __get_kb_retriever_tool(llm_secondary, [f'{kb_doc.document_name}:' for kb_doc in kb_docs], 3)
         return construct_kb_consumer_chain(username, llm_primary, consumer_retrieval, kb_retrieval)
     
-    
-    kb_retrieval = __get_kb_retriever_tool(llm_secondary, [kb_doc.document_name for kb_doc in kb_docs], 4)
+    kb_retrieval = __get_kb_retriever_tool(llm_secondary, [f'{kb_doc.document_name}:' for kb_doc in kb_docs], 4)
     return construct_kb_chain(username, llm_primary, kb_retrieval)
 
 # SETUP KNOWLEDGE BASE + CONSUMER'S DOCUMENT CHAIN
