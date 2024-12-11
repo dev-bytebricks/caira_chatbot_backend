@@ -38,7 +38,10 @@ async def manage_upload_file(files, username, session):
         file_type = file.content_type
         extracted_text = extract_text(file.filename, contents, file_type)
         if len(extracted_text) > settings.CONSUMER_FILE_CHARACTERS_LIMIT:
-            raise Exception(f"File character limit exceeded | File Character Count: {len(extracted_text)}")
+            raise HTTPException(
+            status_code=400,
+            detail=f"File character limit exceeded."
+        )
         
         user_doc_db = database_helper.get_file_from_user_db(person_data.email, file.filename)
         if user_doc_db:
