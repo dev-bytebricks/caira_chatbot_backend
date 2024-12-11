@@ -17,7 +17,7 @@ async def send_account_verification_email(user: User, background_tasks: Backgrou
         'activate_url': activate_url,
         'site_url': 'http://www.unwildered.co.uk'
     }
-    subject = f"Welcome, I’m {settings.APP_NAME} | Unwildered"
+    subject = f"Welcome, I’m {settings.APP_NAME} | Ilexia"
     await send_email(
         recipients=[user.email],
         subject=subject,
@@ -36,7 +36,7 @@ async def send_delete_verification_email(user: User, background_tasks: Backgroun
         'delete_url': delete_url,
         'site_url': 'http://www.unwildered.co.uk'
     }
-    subject = f"Unwildered - Account Deletion Request"
+    subject = f"Ilexia - Account Deletion Request"
     await send_email(
         recipients=[user.email],
         subject=subject,
@@ -51,7 +51,7 @@ async def send_account_activation_confirmation_email(user: User, background_task
         "name": user.name,
         'login_url': f'{settings.FRONTEND_HOST}'
     }
-    subject = f"Welcome, I’m {settings.APP_NAME} | Unwildered"
+    subject = f"Welcome, I’m {settings.APP_NAME} | Ilexia"
     await send_email(
         recipients=[user.email],
         subject=subject,
