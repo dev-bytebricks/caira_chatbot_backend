@@ -11,8 +11,6 @@ class Role(enum.Enum):
 class Plan(enum.Enum):
     free = "Free"
     one_month = "One Month"
-    three_month = "Three Month"
-    six_month = "Six Month"
 
     @classmethod
     def from_string(cls, string_value: str):
