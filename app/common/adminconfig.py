@@ -39,7 +39,7 @@ class AdminConfig:
                 cls.LLM_STREAMING = True
                 cls.LLM_PROMPT = admin_config.llm_prompt = ""
                 cls.LLM_ROLE = admin_config.llm_role = "helpful assistant"
-                cls.GREETING_MESSAGE = admin_config.greeting_message = "Hi! I am Caira."
+                cls.GREETING_MESSAGE = admin_config.greeting_message = "Hi! I am Ilexia."
                 cls.DISCLAIMERS = admin_config.disclaimers = "Put your disclaimers"
                 cls.GDRIVE_ENABLED = admin_config.gdrive_enabled = False
                 cls.LOGO_LINK = admin_config.logo_link = "logo_link"
@@ -53,7 +53,7 @@ class AdminConfig:
             cls.LLM_STREAMING = True
             cls.LLM_PROMPT = ""
             cls.LLM_ROLE = "helpful assistant"
-            cls.GREETING_MESSAGE = "Hi! I am Caira."
+            cls.GREETING_MESSAGE = "Hi! I am Ilexia."
             cls.DISCLAIMERS = "Put your cisclaimers"
             cls.GDRIVE_ENABLED = False
             cls.LOGO_LINK = "logo_link"

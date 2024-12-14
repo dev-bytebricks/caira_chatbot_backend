@@ -41,6 +41,6 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Caira V2 is live"}
+    return {"message": "Ilexia AI is live"}
 
 FastAPIInstrumentor.instrument_app(app)
