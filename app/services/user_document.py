@@ -67,7 +67,7 @@ async def manage_upload_file(files, username, session):
         
         except Exception as e:
             logger.error(f"Error during vectorization and chunking: {e}")
-            database_helper.update_user_file_entry(person_data.email, file.filename, "Failed")
+            database_helper.update_user_file_entry(person_data.email, file.filename, "upload_failed")
             raise HTTPException(
                 status_code=400,
                 detail=f"Failed to upload."
