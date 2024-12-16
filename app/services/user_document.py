@@ -46,20 +46,32 @@ async def manage_upload_file(files, username, session):
         user_doc_db = database_helper.get_file_from_user_db(person_data.email, file.filename)
         if user_doc_db:
             if user_doc_db.status == "Completed":
-                # Delete pre-existing vectors from Pinecone with same name (consumer vector id pattern -> user_name:file_name:chunk_num)
-                logger.warn(f"func_process_uploaded_files_consumer --> File is already uploaded, overwritting file. | User Name: {person_data.email} | File Name: {file.filename}")
-                await delete_file(f"{person_data.email}:{file.filename}:", PINECONE_CONUMER_INDEX_CLIENT)
-                database_helper.delete_user_file_entry(person_data.email, file.filename)
-                # Create entry in database with file uploaded status
-                database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
-
+                try:
+                    # Delete pre-existing vectors from Pinecone with same name (consumer vector id pattern -> user_name:file_name:chunk_num)
+                    logger.warn(f"func_process_uploaded_files_consumer --> File is already uploaded, overwritting file. | User Name: {person_data.email} | File Name: {file.filename}")
+                    await delete_file(f"{person_data.email}:{file.filename}:", PINECONE_CONUMER_INDEX_CLIENT)
+                    database_helper.delete_user_file_entry(person_data.email, file.filename)
+                    # Create entry in database with file uploaded status
+                    database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
+                except Exception as e:
+                    await delete_file(f"{person_data.email}:{file.filename}:", PINECONE_CONUMER_INDEX_CLIENT)
+                    database_helper.delete_user_file_entry(person_data.email, file.filename)
+                    # Create entry in database with file uploaded status
+                    database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
         database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
-        # Chunk, vectorise and upload to Pinecone (consumer vector id pattern -> user_name:file_name:chunk_num)
-        await upload_file(f"{person_data.email}:{file.filename}:", extracted_text, PINECONE_CONUMER_INDEX_CLIENT, settings.EMBEDDINGS_MODEL_NAME)
-        database_helper.update_user_file_entry(person_data.email, file.filename, "Completed")
+        try:
+            # Chunk, vectorise and upload to Pinecone (consumer vector id pattern -> user_name:file_name:chunk_num)
+            await upload_file(f"{person_data.email}:{file.filename}:", extracted_text, PINECONE_CONUMER_INDEX_CLIENT, settings.EMBEDDINGS_MODEL_NAME)
+            database_helper.update_user_file_entry(person_data.email, file.filename, "Completed")
+            logger.info(f"func_process_uploaded_files_consumer --> Finished | User Name: {person_data.email} | File Name: {file.filename}")
         
-        logger.info(f"func_process_uploaded_files_consumer --> Finished | User Name: {person_data.email} | File Name: {file.filename}")
-
+        except Exception as e:
+            logger.error(f"Error during vectorization and chunking: {e}")
+            database_helper.update_user_file_entry(person_data.email, file.filename, "Failed")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to upload."
+            )
 # async def enqueue_gdrive_upload(gdrivelink, userdata: User, session: Session):
 #     username = userdata.email
 #     user_plan = userdata.plan

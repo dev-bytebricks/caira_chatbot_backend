@@ -35,16 +35,32 @@ async def manage_kb_upload_file(files, session):
         kb_doc_db = database_helper.get_file_from_kb_db(file.filename)
         if kb_doc_db:
             if kb_doc_db.status == "Completed":
-                # Delete pre-existing vectors from Pinecone with same name (consumer vector id pattern -> user_name:file_name:chunk_num)
-                await delete_file(f"{file.filename}:", PINECONE_KB_INDEX_CLIENT)
-                database_helper.delete_kb_file_entry(file.filename)
-                # Create entry in database with file uploaded status
-                database_helper.create_kb_file_entry(file.filename, "Completed", file_type)
-                file_name_formated = f'{file.filename}::'
-                await delete_file(file_name_formated, PINECONE_KB_INDEX_CLIENT)
-        database_helper.create_kb_file_entry(file.filename, "Completed", file_type)
-        await upload_file(f"{file.filename}:", extracted_text, PINECONE_KB_INDEX_CLIENT, settings.EMBEDDINGS_MODEL_NAME)
-        logger.info(f"func_process_uploaded_files_kb --> Finished | File Name: {file.filename}")
+                try:
+                    # Delete pre-existing vectors from Pinecone with same name (consumer vector id pattern -> user_name:file_name:chunk_num)
+                    await delete_file(f"{file.filename}:", PINECONE_KB_INDEX_CLIENT)
+                    database_helper.delete_kb_file_entry(file.filename)
+                    # Create entry in database with file uploaded status
+                    database_helper.create_kb_file_entry(file.filename, "Completed", file_type)
+                except Exception as e:
+                    logger.error(f"Error during deleting from pinecone and database: {e}")
+                    await delete_file(f"{file.filename}:", PINECONE_KB_INDEX_CLIENT)
+                    database_helper.delete_kb_file_entry(file.filename)
+                    # Create entry in database with file uploaded status
+                    database_helper.create_kb_file_entry(file.filename, "Completed", file_type)
+                    logger.error(f"Deleted succefully from pinecone and database and created fresh entry")
+                # file_name_formated = f'{file.filename}::'
+                # await delete_file(file_name_formated, PINECONE_KB_INDEX_CLIENT)
+        try:
+            database_helper.create_kb_file_entry(file.filename, "Completed", file_type)
+            await upload_file(f"{file.filename}:", extracted_text, PINECONE_KB_INDEX_CLIENT, settings.EMBEDDINGS_MODEL_NAME)
+            logger.info(f"func_process_uploaded_files_kb --> Finished | File Name: {file.filename}")
+        except Exception as e:
+            logger.error(f"Error during vectorization and chunking: {e}")
+            database_helper.update_kb_file_entry(file.filename, "Failed")
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to upload OpenAI quata complted. Please recharge your Openai account."
+            )
 
 
 # async def enqueue_gdrive_upload(gdrivelink, session: Session):
