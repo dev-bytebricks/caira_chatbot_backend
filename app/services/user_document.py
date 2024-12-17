@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 async def manage_upload_file(files, username, session):
     person_data = session.query(User).filter(User.email == username).first()
+    if person_data.role == Role.User:
+        max_files_allowed = settings.FREE_PLAN_FILE_UPLOAD_LIMIT if person_data.role == Role.User == Plan.free else settings.PREMIUM_PLANS_FILE_UPLOAD_LIMIT
+    user_doc_count = session.query(UserDocument).filter(User.user_id == username).all()
+    if user_doc_count > max_files_allowed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"You can't upload further files Only {max_files_allowed - user_doc_count} more files can be uploaded.")
 
     base_directory = Path('/app/static/') / str(person_data.id)
     # Create the directory for the user if it does not exist
@@ -51,13 +56,9 @@ async def manage_upload_file(files, username, session):
                     logger.warn(f"func_process_uploaded_files_consumer --> File is already uploaded, overwritting file. | User Name: {person_data.email} | File Name: {file.filename}")
                     await delete_file(f"{person_data.email}:{file.filename}:", PINECONE_CONUMER_INDEX_CLIENT)
                     database_helper.delete_user_file_entry(person_data.email, file.filename)
-                    # Create entry in database with file uploaded status
-                    database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
                 except Exception as e:
                     await delete_file(f"{person_data.email}:{file.filename}:", PINECONE_CONUMER_INDEX_CLIENT)
                     database_helper.delete_user_file_entry(person_data.email, file.filename)
-                    # Create entry in database with file uploaded status
-                    database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
         database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
         try:
             # Chunk, vectorise and upload to Pinecone (consumer vector id pattern -> user_name:file_name:chunk_num)

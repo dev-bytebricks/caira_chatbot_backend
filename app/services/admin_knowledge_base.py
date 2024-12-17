@@ -39,14 +39,10 @@ async def manage_kb_upload_file(files, session):
                     # Delete pre-existing vectors from Pinecone with same name (consumer vector id pattern -> user_name:file_name:chunk_num)
                     await delete_file(f"{file.filename}:", PINECONE_KB_INDEX_CLIENT)
                     database_helper.delete_kb_file_entry(file.filename)
-                    # Create entry in database with file uploaded status
-                    database_helper.create_kb_file_entry(file.filename, "Completed", file_type)
                 except Exception as e:
                     logger.error(f"Error during deleting from pinecone and database: {e}")
                     await delete_file(f"{file.filename}:", PINECONE_KB_INDEX_CLIENT)
                     database_helper.delete_kb_file_entry(file.filename)
-                    # Create entry in database with file uploaded status
-                    database_helper.create_kb_file_entry(file.filename, "Completed", file_type)
                     logger.error(f"Deleted succefully from pinecone and database and created fresh entry")
                 # file_name_formated = f'{file.filename}::'
                 # await delete_file(file_name_formated, PINECONE_KB_INDEX_CLIENT)
