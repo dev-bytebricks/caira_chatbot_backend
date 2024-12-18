@@ -16,7 +16,7 @@ class OpenAIManager:
     
     CHAT_PRIMARY: ChatOpenAI
 
-    EMBEDDINGS = OpenAIEmbeddings(api_key=settings.OPENAI_API_KEY,model='text-embedding-3-large')
+    EMBEDDINGS = OpenAIEmbeddings(api_key=settings.OPENAI_API_KEY,model='text-embedding-3-small')
 
     @classmethod
     def update_primary_chat_instance(cls):
