@@ -24,6 +24,10 @@ async def manage_upload_file(files, username, session):
     person_data = session.query(User).filter(User.email == username).first()
     if person_data.role == Role.User:
         max_files_allowed = settings.FREE_PLAN_FILE_UPLOAD_LIMIT if person_data.plan == Plan.free else settings.PREMIUM_PLANS_FILE_UPLOAD_LIMIT
+    else:
+        # For admins, we don't need to check for plan
+        max_files_allowed = settings.PREMIUM_PLANS_FILE_UPLOAD_LIMIT
+        
     user_doc_count = session.query(UserDocument).filter(UserDocument.user_id == username).all()
     if len(user_doc_count) > max_files_allowed:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"You can't upload further files Only {max_files_allowed - len(user_doc_count)} more files can be uploaded.")

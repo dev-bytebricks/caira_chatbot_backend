@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     STRIPE_WEBHOOK_SECRET: str
 
     # User Usage Limits
-    FREE_PLAN_FILE_UPLOAD_LIMIT: int
+    FREE_PLAN_FILE_UPLOAD_LIMIT: int = 5
     FREE_PLAN_MSG_LIMIT: int
-    PREMIUM_PLANS_FILE_UPLOAD_LIMIT: int
+    PREMIUM_PLANS_FILE_UPLOAD_LIMIT: int = 15
 
     # MySQL Database Config
     MYSQL_HOST: str
