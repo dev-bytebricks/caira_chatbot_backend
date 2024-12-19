@@ -57,6 +57,7 @@ async def create_user_account(data, session, background_tasks):
 
     # Account Verification Email
     await email.send_account_verification_email(user, background_tasks=background_tasks)
+    await email.send_admin_new_user_email(user, background_tasks=background_tasks)
     return user
 
 async def update_user_payment(customerId, subscriptionId, session):

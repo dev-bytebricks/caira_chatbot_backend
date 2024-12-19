@@ -7,6 +7,21 @@ from app.common.security import hash_password
 
 settings = get_settings()
 
+async def send_admin_new_user_email(user: User, background_tasks: BackgroundTasks):
+    data = {
+        'app_name': settings.APP_NAME,
+        "name": user.name,
+        "email": user.email,
+    }
+    subject = f"Nuevo usuario registrado | Ilexia"
+    await send_email(
+        recipients=["soporte@iadevinvestiments.com"],
+        subject=subject,
+        template_name="user/admin-new-user.html",
+        context=data,
+        background_tasks=background_tasks
+    )
+
 async def send_account_verification_email(user: User, background_tasks: BackgroundTasks):
     string_context = user.get_context_string(context=USER_VERIFY_ACCOUNT)
     token = hash_password(string_context)

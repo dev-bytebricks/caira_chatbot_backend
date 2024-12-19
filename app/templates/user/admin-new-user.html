@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<head>
+    <title>Nuevo Usuario Registrado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #333;
+        }
+        .email-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 16px;
+        }
+        .info-section {
+            margin: 20px 0;
+        }
+        .info-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .info-value {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <a href="https://ilexia.ai/" target="_blank">
+            <img src="https://ilexia.ai/logo-bg.png" alt="logo" class="logo">
+        </a>
+        
+        <h1>¡Nuevo Usuario Registrado en Ilexia!</h1>
+        
+        <div class="info-section">
+            <p class="info-label">Nombre del Usuario:</p>
+            <p class="info-value">{{name}}</p>
+
+            <p class="info-label">Correo Electrónico:</p>
+            <p class="info-value">{{email}}</p>
+
+            <p class="info-label">Fecha de Registro:</p>
+            <p class="info-value">{{registration_date}}</p>
+        </div>
+
+        <p>Este usuario se ha registrado recientemente en la plataforma {{app_name}}. Por favor, revise los detalles anteriores para su seguimiento.</p>
+
+        <p>Saludos,<br>Sistema de Notificaciones de Ilexia</p>
+    </div>
+</body>
+</html>
