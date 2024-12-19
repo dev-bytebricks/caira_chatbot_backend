@@ -30,6 +30,7 @@ async def manage_upload_file(files, username, session):
         
     user_doc_count = session.query(UserDocument).filter(UserDocument.user_id == username).all()
     if len(user_doc_count) > max_files_allowed:
+        print(f"Error: You can't upload further files Only {max_files_allowed - len(user_doc_count)} more files can be uploaded.")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"You can't upload further files Only {max_files_allowed - len(user_doc_count)} more files can be uploaded.")
 
     base_directory = Path('/app/static/') / str(person_data.id)
@@ -47,31 +48,34 @@ async def manage_upload_file(files, username, session):
         file_type = file.content_type
         extracted_text = extract_text(file.filename, contents, file_type)
         if len(extracted_text) > settings.CONSUMER_FILE_CHARACTERS_LIMIT:
+            print(f"Error: File character limit exceeded.")
             raise HTTPException(
-            status_code=400,
-            detail=f"File character limit exceeded."
-        )
+                status_code=400,
+                detail=f"File character limit exceeded."
+            )
         
         user_doc_db = database_helper.get_file_from_user_db(person_data.email, file.filename)
         if user_doc_db:
             if user_doc_db.status == "Completed":
                 try:
                     # Delete pre-existing vectors from Pinecone with same name (consumer vector id pattern -> user_name:file_name:chunk_num)
-                    logger.warn(f"func_process_uploaded_files_consumer --> File is already uploaded, overwritting file. | User Name: {person_data.email} | File Name: {file.filename}")
+                    print(f"Warn: func_process_uploaded_files_consumer --> File is already uploaded, overwritting file. | User Name: {person_data.email} | File Name: {file.filename}")
                     await delete_file(f"{person_data.email}:{file.filename}:", PINECONE_CONUMER_INDEX_CLIENT)
                     database_helper.delete_user_file_entry(person_data.email, file.filename)
                 except Exception as e:
+                    print(f"Error: {e}")
                     await delete_file(f"{person_data.email}:{file.filename}:", PINECONE_CONUMER_INDEX_CLIENT)
                     database_helper.delete_user_file_entry(person_data.email, file.filename)
         database_helper.create_user_file_entry(person_data.email, file.filename, "Uploaded", file_type)
         try:
             # Chunk, vectorise and upload to Pinecone (consumer vector id pattern -> user_name:file_name:chunk_num)
+            print(f"Info: func_process_uploaded_files_consumer --> Chunking, vectorising and uploading to Pinecone | User Name: {person_data.email} | File Name: {file.filename}")
             await upload_file(f"{person_data.email}:{file.filename}:", extracted_text, PINECONE_CONUMER_INDEX_CLIENT, settings.EMBEDDINGS_MODEL_NAME)
             database_helper.update_user_file_entry(person_data.email, file.filename, "Completed")
-            logger.info(f"func_process_uploaded_files_consumer --> Finished | User Name: {person_data.email} | File Name: {file.filename}")
+            print(f"Info: func_process_uploaded_files_consumer --> Finished | User Name: {person_data.email} | File Name: {file.filename}")
         
         except Exception as e:
-            logger.error(f"Error during vectorization and chunking: {e}")
+            print(f"Error: {e}")
             database_helper.update_user_file_entry(person_data.email, file.filename, "upload_failed")
             raise HTTPException(
                 status_code=400,
